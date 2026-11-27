@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>日本株 勉強＆企業分析ダッシュボード</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --card-hover: #334155;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --border: #334155;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+    header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+    header h1 {
+      font-size: 1.15rem;
+      margin: 0;
+    }
+    .subtitle {
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 16px;
+      display: grid;
+      gap: 16px;
+    }
+    .watchlist {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .stock-btn {
+      background: var(--card);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 16px;
+      cursor: pointer;
+      text-align: left;
+      transition: 0.15s;
+    }
+    .stock-btn:hover { background: var(--card-hover); }
+    .stock-btn.active {
+      border-color: var(--accent);
+      background: #0c4a6e;
+    }
+    .stock-code {
+      font-size: 0.8rem;
+      color: var(--accent);
+      font-weight: bold;
+    }
+    .stock-name {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+    .grid-main {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+    @media (min-width: 900px) {
+      .grid-main {
+        grid-template-columns: 2fr 1fr;
+      }
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .card h2 {
+      font-size: 1rem;
+      margin: 0 0 12px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    .chart-box {
+      height: 460px;
+      width: 100%;
+    }
+    .links-grid {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .ext-link {
+      display: block;
+      padding: 10px 12px;
+      background: #0f172a;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+    .ext-link:hover {
+      border-color: var(--accent);
+    }
+    .memo-box {
+      background: #0f172a;
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 0.9rem;
+    }
+    .memo-box ul {
+      margin: 8px 0 0 0;
+      padding-left: 18px;
+    }
+    .tag {
+      font-size: 0.75rem;
+      background: #334155;
+      padding: 2px 8px;
+      border-radius: 999px;
+      color: var(--text);
+      white-space: nowrap;
+    }
+    .meta-added {
+      margin-top: 10px;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>📈 日本株 勉強＆企業分析ダッシュボード</h1>
+      <div class="subtitle">PC・スマホ共通 / チャート・決算・ニュース速報</div>
+    </div>
+    <div class="subtitle" id="last-updated">読み込み中...</div>
+  </header>
+
+  <main class="container">
+    <section class="watchlist" id="watchlist"></section>
+
+    <div class="grid-main">
+      <section class="card">
+        <h2>
+          <span id="chart-title">チャート</span>
+          <span class="tag" id="sector-tag">セクター</span>
+        </h2>
+        <div class="chart-box" id="tv-chart-container"></div>
+      </section>
+
+      <section class="card">
+        <h2>決算・ニュース速報＆勉強メモ</h2>
+        <div class="links-grid" id="quick-links"></div>
+        <div class="memo-box">
+          <strong>📝 注目ポイント・議論メモ</strong>
+          <ul id="study-notes"></ul>
+          <div class="meta-added" id="added-by"></div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+  <script>
+    let STOCKS = [];
+    let currentIndex = 0;
+
+    async function loadStocks() {
+      const updatedEl = document.getElementById("last-updated");
+      try {
+        const res = await fetch(`./stocks.json?t=${Date.now()}`);
+        if (!res.ok) throw new Error("stocks.json の読み込みに失敗しました");
+        STOCKS = await res.json();
+        updatedEl.textContent = `登録銘柄数: ${STOCKS.length}件`;
+        if (STOCKS.length > 0) {
+          selectStock(0);
+        }
+      } catch (err) {
+        updatedEl.textContent = "データ読み込みエラー";
+        document.getElementById("watchlist").innerHTML =
+          `<div class="subtitle">※ ローカルで直接開いた場合は、GitHub Pagesまたはローカルサーバー経由で開いてください（${err.message}）。</div>`;
+      }
+    }
+
+    function renderWatchlist() {
+      const container = document.getElementById("watchlist");
+      container.innerHTML = "";
+      STOCKS.forEach((stock, idx) => {
+        const btn = document.createElement("button");
+        btn.className = "stock-btn" + (idx === currentIndex ? " active" : "");
+        btn.innerHTML = `
+          <div class="stock-code">${escapeHtml(stock.code)}</div>
+          <div class="stock-name">${escapeHtml(stock.name)}</div>
+        `;
+        btn.onclick = () => selectStock(idx);
+        container.appendChild(btn);
+      });
+    }
+
+    function selectStock(idx) {
+      currentIndex = idx;
+      const stock = STOCKS[idx];
+      renderWatchlist();
+
+      document.getElementById("chart-title").textContent = `${stock.name}（${stock.code}）`;
+      document.getElementById("sector-tag").textContent = stock.sector || "未分類";
+
+      const chartContainer = document.getElementById("tv-chart-container");
+      chartContainer.innerHTML = "";
+      new TradingView.widget({
+        autosize: true,
+        symbol: stock.tvSymbol || `TSE:${stock.code}`,
+        interval: "D",
+        timezone: "Asia/Tokyo",
+        theme: "dark",
+        style: "1",
+        locale: "ja",
+        enable_publishing: false,
+        allow_symbol_change: true,
+        container_id: "tv-chart-container"
+      });
+
+      const irHref = stock.irUrl && stock.irUrl.startsWith("http")
+        ? stock.irUrl
+        : `https://www.google.com/search?q=${encodeURIComponent(stock.name + " IR 決算")}`;
+
+      const linksDiv = document.getElementById("quick-links");
+      linksDiv.innerHTML = `
+        <a class="ext-link" href="${irHref}" target="_blank" rel="noopener">📊 公式IR・決算資料ページを開く ↗</a>
+        <a class="ext-link" href="https://finance.yahoo.co.jp/quote/${encodeURIComponent(stock.code)}.T/news" target="_blank" rel="noopener">📰 Yahoo!ファイナンス ニュース・適時開示 ↗</a>
+        <a class="ext-link" href="https://kabutan.jp/stock/news?code=${encodeURIComponent(stock.code)}" target="_blank" rel="noopener">⚡ 株探（Kabutan）決算速報・材料ニュース ↗</a>
+      `;
+
+      const notes = Array.isArray(stock.notes) && stock.notes.length > 0
+        ? stock.notes
+        : ["決算短信・適時開示の売上・営業利益・通期見通しを確認する"];
+      const notesUl = document.getElementById("study-notes");
+      notesUl.innerHTML = notes.map(n => `<li>${escapeHtml(n)}</li>`).join("");
+
+      document.getElementById("added-by").textContent =
+        stock.addedBy ? `追加: ${stock.addedBy}` : "";
+    }
+
+    function escapeHtml(str) {
+      return String(str ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    loadStocks();
+  </script>
+</body>
+</html>
