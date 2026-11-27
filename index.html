@@ -3,261 +3,617 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>日本株 勉強＆企業分析ダッシュボード</title>
+  <title>日本株 勉強ダッシュボード</title>
+  <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
   <style>
     :root {
-      --bg: #0f172a;
-      --card: #1e293b;
-      --card-hover: #334155;
-      --text: #f8fafc;
-      --muted: #94a3b8;
-      --accent: #38bdf8;
-      --border: #334155;
+      --bg: #0b101b;
+      --panel: #121a2a;
+      --panel-2: #182236;
+      --border: #26344f;
+      --text: #e6edf7;
+      --muted: #93a4bf;
+      --accent: #3b82f6;
+      --accent-soft: rgba(59, 130, 246, 0.16);
+      --up: #ef4444;
+      --down: #22c55e;
+      --warn-bg: rgba(245, 158, 11, 0.12);
+      --warn-border: rgba(245, 158, 11, 0.35);
+      --warn-text: #fcd34d;
     }
-    * { box-sizing: border-box; }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Sans", "Noto Sans JP", sans-serif;
       background: var(--bg);
       color: var(--text);
       line-height: 1.6;
     }
+
     header {
-      padding: 16px 20px;
       border-bottom: 1px solid var(--border);
+      background: rgba(18, 26, 42, 0.9);
+      backdrop-filter: blur(8px);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .header-inner {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 14px 20px;
       display: flex;
       flex-wrap: wrap;
-      justify-content: space-between;
       align-items: center;
-      gap: 10px;
+      justify-content: space-between;
+      gap: 12px;
     }
-    header h1 {
-      font-size: 1.15rem;
+
+    .brand h1 {
       margin: 0;
+      font-size: 1.15rem;
+      font-weight: 700;
     }
-    .subtitle {
-      font-size: 0.85rem;
+
+    .brand p {
+      margin: 2px 0 0;
+      font-size: 0.82rem;
       color: var(--muted);
     }
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 16px;
-      display: grid;
-      gap: 16px;
-    }
-    .watchlist {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-    .stock-btn {
-      background: var(--card);
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 10px 16px;
-      cursor: pointer;
-      text-align: left;
-      transition: 0.15s;
-    }
-    .stock-btn:hover { background: var(--card-hover); }
-    .stock-btn.active {
-      border-color: var(--accent);
-      background: #0c4a6e;
-    }
-    .stock-code {
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      border: 1px solid rgba(59, 130, 246, 0.35);
+      color: #93c5fd;
       font-size: 0.8rem;
-      color: var(--accent);
-      font-weight: bold;
-    }
-    .stock-name {
-      font-size: 1rem;
       font-weight: 600;
     }
-    .grid-main {
+
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 20px;
       display: grid;
-      grid-template-columns: 1fr;
-      gap: 16px;
+      grid-template-columns: 280px 1fr;
+      gap: 20px;
     }
-    @media (min-width: 900px) {
-      .grid-main {
-        grid-template-columns: 2fr 1fr;
+
+    @media (max-width: 900px) {
+      .container {
+        grid-template-columns: 1fr;
       }
     }
-    .card {
-      background: var(--card);
+
+    .sidebar {
+      background: var(--panel);
       border: 1px solid var(--border);
-      border-radius: 12px;
+      border-radius: 14px;
       padding: 16px;
+      height: fit-content;
     }
-    .card h2 {
-      font-size: 1rem;
-      margin: 0 0 12px 0;
+
+    .sidebar-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+      margin: 0 0 12px;
+    }
+
+    .stock-list {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
+      flex-direction: column;
       gap: 8px;
     }
-    .chart-box {
-      height: 460px;
+
+    .stock-btn {
       width: 100%;
-    }
-    .links-grid {
-      display: grid;
-      gap: 8px;
-      margin-bottom: 16px;
-    }
-    .ext-link {
-      display: block;
-      padding: 10px 12px;
-      background: #0f172a;
+      text-align: left;
+      background: var(--panel-2);
       border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--accent);
-      text-decoration: none;
-      font-size: 0.9rem;
+      border-radius: 10px;
+      padding: 10px 12px;
+      color: var(--text);
+      cursor: pointer;
+      transition: border-color 0.15s ease, background 0.15s ease;
     }
-    .ext-link:hover {
+
+    .stock-btn:hover {
+      border-color: #476294;
+    }
+
+    .stock-btn.active {
+      background: var(--accent-soft);
       border-color: var(--accent);
     }
-    .memo-box {
-      background: #0f172a;
-      border-radius: 8px;
-      padding: 12px;
-      font-size: 0.9rem;
-    }
-    .memo-box ul {
-      margin: 8px 0 0 0;
-      padding-left: 18px;
-    }
-    .tag {
-      font-size: 0.75rem;
-      background: #334155;
-      padding: 2px 8px;
-      border-radius: 999px;
-      color: var(--text);
-      white-space: nowrap;
-    }
-    .meta-added {
-      margin-top: 10px;
+
+    .stock-code {
       font-size: 0.78rem;
+      color: #93c5fd;
+      font-weight: 700;
+    }
+
+    .stock-name {
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-top: 2px;
+    }
+
+    .stock-sector {
+      font-size: 0.76rem;
       color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .main-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px;
+    }
+
+    .stock-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .stock-heading h2 {
+      margin: 0;
+      font-size: 1.35rem;
+    }
+
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-top: 6px;
+      font-size: 0.84rem;
+      color: var(--muted);
+    }
+
+    .pill {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 2px 10px;
+      font-size: 0.78rem;
+      color: var(--text);
+    }
+
+    .quick-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .link-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 12px;
+      border-radius: 9px;
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      color: var(--text);
+      text-decoration: none;
+      font-size: 0.84rem;
+      font-weight: 600;
+      transition: border-color 0.15s ease, background 0.15s ease;
+    }
+
+    .link-btn:hover {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .chart-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .toolbar-group {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .ctrl-btn {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .ctrl-btn:hover {
+      border-color: var(--accent);
+    }
+
+    .ctrl-btn.active {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: #93c5fd;
+    }
+
+    .ohlc-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-bottom: 10px;
+      padding: 8px 12px;
+      background: var(--panel-2);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .ohlc-bar strong {
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+
+    #chartContainer {
+      width: 100%;
+      height: 430px;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: #0d1422;
+    }
+
+    @media (max-width: 600px) {
+      #chartContainer {
+        height: 340px;
+      }
+    }
+
+    .notice-box {
+      margin-top: 12px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: var(--warn-bg);
+      border: 1px solid var(--warn-border);
+      color: var(--warn-text);
+      font-size: 0.82rem;
+    }
+
+    .notes-section h3 {
+      margin: 0 0 10px;
+      font-size: 1rem;
+    }
+
+    .notes-list {
+      margin: 0;
+      padding-left: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .notes-list li {
+      color: var(--text);
+      font-size: 0.92rem;
+    }
+
+    .error-box {
+      padding: 14px;
+      border-radius: 10px;
+      background: rgba(239, 68, 68, 0.14);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+      font-size: 0.9rem;
     }
   </style>
 </head>
 <body>
   <header>
-    <div>
-      <h1>📈 日本株 勉強＆企業分析ダッシュボード</h1>
-      <div class="subtitle">PC・スマホ共通 / チャート・決算・ニュース速報</div>
+    <div class="header-inner">
+      <div class="brand">
+        <h1>日本株 勉強ダッシュボード</h1>
+        <p>ウォッチリスト切替・Web内チャート操作・決算/ニュース確認・注目ポイント共有</p>
+      </div>
+      <div class="badge">Lightweight Charts 搭載</div>
     </div>
-    <div class="subtitle" id="last-updated">読み込み中...</div>
   </header>
 
   <main class="container">
-    <section class="watchlist" id="watchlist"></section>
+    <aside class="sidebar">
+      <h2 class="sidebar-title">登録銘柄（stocks.json）</h2>
+      <div id="stockList" class="stock-list"></div>
+    </aside>
 
-    <div class="grid-main">
-      <section class="card">
-        <h2>
-          <span id="chart-title">チャート</span>
-          <span class="tag" id="sector-tag">セクター</span>
-        </h2>
-        <div class="chart-box" id="tv-chart-container"></div>
-      </section>
+    <section class="main-stack">
+      <div id="statusArea"></div>
 
-      <section class="card">
-        <h2>決算・ニュース速報＆勉強メモ</h2>
-        <div class="links-grid" id="quick-links"></div>
-        <div class="memo-box">
-          <strong>📝 注目ポイント・議論メモ</strong>
-          <ul id="study-notes"></ul>
-          <div class="meta-added" id="added-by"></div>
+      <div class="card">
+        <div class="stock-header">
+          <div class="stock-heading">
+            <h2 id="stockTitle">銘柄を読み込み中...</h2>
+            <div class="meta-row">
+              <span id="stockSector" class="pill">-</span>
+              <span id="stockAddedBy">追加元: -</span>
+            </div>
+          </div>
+
+          <div class="quick-links">
+            <a id="yahooLink" class="link-btn" href="#" target="_blank" rel="noopener noreferrer">Yahoo!ファイナンス</a>
+            <a id="kabutanLink" class="link-btn" href="#" target="_blank" rel="noopener noreferrer">株探</a>
+            <a id="tvLink" class="link-btn" href="#" target="_blank" rel="noopener noreferrer">TradingViewで開く</a>
+            <a id="irLink" class="link-btn" href="#" target="_blank" rel="noopener noreferrer" style="display:none;">公式IR</a>
+          </div>
         </div>
-      </section>
-    </div>
+
+        <div class="chart-toolbar">
+          <div class="toolbar-group" id="modeGroup">
+            <button type="button" class="ctrl-btn active" data-mode="candle">ローソク足</button>
+            <button type="button" class="ctrl-btn" data-mode="line">終値ライン</button>
+          </div>
+          <div class="toolbar-group">
+            <button type="button" class="ctrl-btn" id="resetZoomBtn">表示リセット</button>
+          </div>
+        </div>
+
+        <div class="ohlc-bar" id="ohlcBar">
+          <span>日時: <strong id="ohlcTime">-</strong></span>
+          <span>始値: <strong id="ohlcOpen">-</strong></span>
+          <span>高値: <strong id="ohlcHigh">-</strong></span>
+          <span>安値: <strong id="ohlcLow">-</strong></span>
+          <span>終値: <strong id="ohlcClose">-</strong></span>
+        </div>
+
+        <div id="chartContainer"></div>
+
+        <div class="notice-box" id="dataNotice">
+          ※ 第1段階のため、チャートには銘柄コードをもとに生成したサンプル日足データを表示しています（マウスホイールで拡大・縮小、ドラッグで移動できます）。実際の株価データ（日足・分足）を接続する際は第2段階でデータソースを連携します。
+        </div>
+      </div>
+
+      <div class="card notes-section">
+        <h3>注目ポイント・勉強メモ</h3>
+        <ul id="notesList" class="notes-list"></ul>
+      </div>
+    </section>
   </main>
 
-  <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
   <script>
-    let STOCKS = [];
-    let currentIndex = 0;
+    const state = {
+      stocks: [],
+      selectedIndex: 0,
+      chartMode: "candle",
+      chart: null,
+      mainSeries: null,
+      currentBars: []
+    };
 
-    async function loadStocks() {
-      const updatedEl = document.getElementById("last-updated");
-      try {
-        const res = await fetch(`./stocks.json?t=${Date.now()}`);
-        if (!res.ok) throw new Error("stocks.json の読み込みに失敗しました");
-        STOCKS = await res.json();
-        updatedEl.textContent = `登録銘柄数: ${STOCKS.length}件`;
-        if (STOCKS.length > 0) {
-          selectStock(0);
+    function seedFromCode(code) {
+      const str = String(code || "6501");
+      let hash = 2166136261;
+      for (let i = 0; i < str.length; i++) {
+        hash ^= str.charCodeAt(i);
+        hash = Math.imul(hash, 16777619);
+      }
+      return Math.abs(hash >>> 0);
+    }
+
+    function createSampleBars(stock, count = 90) {
+      const seed = seedFromCode(stock.code);
+      let rng = seed || 1234567;
+      function nextRand() {
+        rng = (Math.imul(rng, 1664525) + 1013904223) >>> 0;
+        return rng / 4294967296;
+      }
+
+      let price = 1500 + (seed % 4500);
+      const bars = [];
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+
+      for (let i = count - 1; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(now.getDate() - i);
+        const day = d.getDay();
+        if (day === 0 || day === 6) continue;
+
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, "0");
+        const dd = String(d.getDate()).padStart(2, "0");
+        const timeStr = `${yyyy}-${mm}-${dd}`;
+
+        const drift = (nextRand() - 0.48) * (price * 0.025);
+        const open = Math.max(100, Math.round((price + (nextRand() - 0.5) * 15) * 10) / 10);
+        const close = Math.max(100, Math.round((open + drift) * 10) / 10);
+        const wickUp = nextRand() * (price * 0.015);
+        const wickDown = nextRand() * (price * 0.015);
+        const high = Math.round((Math.max(open, close) + wickUp) * 10) / 10;
+        const low = Math.max(50, Math.round((Math.min(open, close) - wickDown) * 10) / 10);
+
+        bars.push({ time: timeStr, open, high, low, close });
+        price = close;
+      }
+
+      return bars;
+    }
+
+    function updateOhlcDisplay(bar) {
+      if (!bar) return;
+      document.getElementById("ohlcTime").textContent = bar.time ?? "-";
+      document.getElementById("ohlcOpen").textContent = bar.open !== undefined ? Number(bar.open).toLocaleString("ja-JP") : "-";
+      document.getElementById("ohlcHigh").textContent = bar.high !== undefined ? Number(bar.high).toLocaleString("ja-JP") : "-";
+      document.getElementById("ohlcLow").textContent = bar.low !== undefined ? Number(bar.low).toLocaleString("ja-JP") : "-";
+      document.getElementById("ohlcClose").textContent = bar.close !== undefined ? Number(bar.close).toLocaleString("ja-JP") : "-";
+    }
+
+    function ensureChart() {
+      const container = document.getElementById("chartContainer");
+      if (state.chart) {
+        state.chart.remove();
+        state.chart = null;
+        state.mainSeries = null;
+      }
+
+      const chart = LightweightCharts.createChart(container, {
+        width: container.clientWidth,
+        height: container.clientHeight,
+        layout: {
+          background: { type: "solid", color: "#0d1422" },
+          textColor: "#cbd5e1"
+        },
+        grid: {
+          vertLines: { color: "rgba(148, 163, 184, 0.1)" },
+          horzLines: { color: "rgba(148, 163, 184, 0.1)" }
+        },
+        crosshair: {
+          mode: LightweightCharts.CrosshairMode.Normal
+        },
+        rightPriceScale: {
+          borderColor: "#26344f"
+        },
+        timeScale: {
+          borderColor: "#26344f",
+          timeVisible: true,
+          secondsVisible: false
         }
-      } catch (err) {
-        updatedEl.textContent = "データ読み込みエラー";
-        document.getElementById("watchlist").innerHTML =
-          `<div class="subtitle">※ ローカルで直接開いた場合は、GitHub Pagesまたはローカルサーバー経由で開いてください（${err.message}）。</div>`;
+      });
+
+      let series;
+      if (state.chartMode === "line") {
+        series = chart.addLineSeries({
+          color: "#3b82f6",
+          lineWidth: 2
+        });
+        series.setData(state.currentBars.map(b => ({ time: b.time, value: b.close })));
+      } else {
+        series = chart.addCandlestickSeries({
+          upColor: "#ef4444",
+          downColor: "#22c55e",
+          borderUpColor: "#ef4444",
+          borderDownColor: "#22c55e",
+          wickUpColor: "#ef4444",
+          wickDownColor: "#22c55e"
+        });
+        series.setData(state.currentBars);
+      }
+
+      chart.timeScale().fitContent();
+
+      chart.subscribeCrosshairMove(param => {
+        if (!param || !param.time) {
+          if (state.currentBars.length > 0) {
+            updateOhlcDisplay(state.currentBars[state.currentBars.length - 1]);
+          }
+          return;
+        }
+        const found = state.currentBars.find(b => b.time === param.time);
+        if (found) {
+          updateOhlcDisplay(found);
+        }
+      });
+
+      state.chart = chart;
+      state.mainSeries = series;
+
+      if (state.currentBars.length > 0) {
+        updateOhlcDisplay(state.currentBars[state.currentBars.length - 1]);
       }
     }
 
-    function renderWatchlist() {
-      const container = document.getElementById("watchlist");
-      container.innerHTML = "";
-      STOCKS.forEach((stock, idx) => {
+    function renderStockList() {
+      const listEl = document.getElementById("stockList");
+      listEl.innerHTML = "";
+
+      state.stocks.forEach((stock, idx) => {
         const btn = document.createElement("button");
-        btn.className = "stock-btn" + (idx === currentIndex ? " active" : "");
+        btn.type = "button";
+        btn.className = `stock-btn ${idx === state.selectedIndex ? "active" : ""}`;
         btn.innerHTML = `
           <div class="stock-code">${escapeHtml(stock.code)}</div>
           <div class="stock-name">${escapeHtml(stock.name)}</div>
+          <div class="stock-sector">${escapeHtml(stock.sector || "未分類")}</div>
         `;
-        btn.onclick = () => selectStock(idx);
-        container.appendChild(btn);
+        btn.addEventListener("click", () => {
+          state.selectedIndex = idx;
+          renderStockList();
+          renderSelectedStock();
+        });
+        listEl.appendChild(btn);
       });
     }
 
-    function selectStock(idx) {
-      currentIndex = idx;
-      const stock = STOCKS[idx];
-      renderWatchlist();
+    function renderSelectedStock() {
+      const stock = state.stocks[state.selectedIndex];
+      if (!stock) return;
 
-      document.getElementById("chart-title").textContent = `${stock.name}（${stock.code}）`;
-      document.getElementById("sector-tag").textContent = stock.sector || "未分類";
+      document.getElementById("stockTitle").textContent = `${stock.name}（${stock.code}）`;
+      document.getElementById("stockSector").textContent = stock.sector || "未分類";
+      document.getElementById("stockAddedBy").textContent = `追加元: ${stock.addedBy || "管理者"}`;
 
-      const chartContainer = document.getElementById("tv-chart-container");
-      chartContainer.innerHTML = "";
-      new TradingView.widget({
-        autosize: true,
-        symbol: stock.tvSymbol || `TSE:${stock.code}`,
-        interval: "D",
-        timezone: "Asia/Tokyo",
-        theme: "dark",
-        style: "1",
-        locale: "ja",
-        enable_publishing: false,
-        allow_symbol_change: true,
-        container_id: "tv-chart-container"
-      });
+      const codeEncoded = encodeURIComponent(stock.code);
+      document.getElementById("yahooLink").href = `https://finance.yahoo.co.jp/quote/${codeEncoded}.T`;
+      document.getElementById("kabutanLink").href = `https://kabutan.jp/stock/?code=${codeEncoded}`;
 
-      const irHref = stock.irUrl && stock.irUrl.startsWith("http")
-        ? stock.irUrl
-        : `https://www.google.com/search?q=${encodeURIComponent(stock.name + " IR 決算")}`;
+      const tvSymbol = stock.tvSymbol ? encodeURIComponent(stock.tvSymbol) : encodeURIComponent(`TSE:${stock.code}`);
+      document.getElementById("tvLink").href = `https://jp.tradingview.com/chart/?symbol=${tvSymbol}`;
 
-      const linksDiv = document.getElementById("quick-links");
-      linksDiv.innerHTML = `
-        <a class="ext-link" href="${irHref}" target="_blank" rel="noopener">📊 公式IR・決算資料ページを開く ↗</a>
-        <a class="ext-link" href="https://finance.yahoo.co.jp/quote/${encodeURIComponent(stock.code)}.T/news" target="_blank" rel="noopener">📰 Yahoo!ファイナンス ニュース・適時開示 ↗</a>
-        <a class="ext-link" href="https://kabutan.jp/stock/news?code=${encodeURIComponent(stock.code)}" target="_blank" rel="noopener">⚡ 株探（Kabutan）決算速報・材料ニュース ↗</a>
-      `;
+      const irEl = document.getElementById("irLink");
+      if (stock.irUrl) {
+        irEl.href = stock.irUrl;
+        irEl.style.display = "inline-flex";
+      } else {
+        irEl.style.display = "none";
+      }
 
+      const notesEl = document.getElementById("notesList");
+      notesEl.innerHTML = "";
       const notes = Array.isArray(stock.notes) && stock.notes.length > 0
         ? stock.notes
-        : ["決算短信・適時開示の売上・営業利益・通期見通しを確認する"];
-      const notesUl = document.getElementById("study-notes");
-      notesUl.innerHTML = notes.map(n => `<li>${escapeHtml(n)}</li>`).join("");
+        : [`${stock.name}（${stock.code}）の決算・業績・ニュースをチェック`];
 
-      document.getElementById("added-by").textContent =
-        stock.addedBy ? `追加: ${stock.addedBy}` : "";
+      notes.forEach(note => {
+        const li = document.createElement("li");
+        li.textContent = note;
+        notesEl.appendChild(li);
+      });
+
+      const noticeEl = document.getElementById("dataNotice");
+      if (Array.isArray(stock.candles) && stock.candles.length > 0) {
+        state.currentBars = stock.candles;
+        noticeEl.textContent = "※ stocks.json 内の価格データを表示しています。マウスホイールで拡大・縮小、ドラッグで横スクロールできます。";
+      } else {
+        state.currentBars = createSampleBars(stock, 90);
+        noticeEl.textContent = "※ 第1段階のため、銘柄コードをもとに生成したサンプル日足データを表示しています（マウスホイールで拡大・縮小、ドラッグで移動できます）。実際の株価データ（日足・分足）を接続する際は第2段階でデータソースを連携します。";
+      }
+
+      ensureChart();
     }
 
     function escapeHtml(str) {
@@ -269,7 +625,56 @@
         .replace(/'/g, "&#39;");
     }
 
-    loadStocks();
+    function bindControls() {
+      document.querySelectorAll("#modeGroup .ctrl-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll("#modeGroup .ctrl-btn").forEach(b => b.classList.remove("active"));
+          btn.classList.add("active");
+          state.chartMode = btn.dataset.mode;
+          ensureChart();
+        });
+      });
+
+      document.getElementById("resetZoomBtn").addEventListener("click", () => {
+        if (state.chart) {
+          state.chart.timeScale().fitContent();
+        }
+      });
+
+      window.addEventListener("resize", () => {
+        const container = document.getElementById("chartContainer");
+        if (state.chart && container) {
+          state.chart.applyOptions({
+            width: container.clientWidth,
+            height: container.clientHeight
+          });
+        }
+      });
+    }
+
+    async function init() {
+      bindControls();
+      const statusArea = document.getElementById("statusArea");
+
+      try {
+        const res = await fetch(`./stocks.json?t=${Date.now()}`, { cache: "no-store" });
+        if (!res.ok) {
+          throw new Error(`stocks.json の取得に失敗しました（HTTP ${res.status}）`);
+        }
+        const data = await res.json();
+        if (!Array.isArray(data) || data.length === 0) {
+          throw new Error("stocks.json に銘柄データが見つかりません。");
+        }
+        state.stocks = data;
+        renderStockList();
+        renderSelectedStock();
+      } catch (err) {
+        statusArea.innerHTML = `<div class="error-box">読み込みエラー: ${escapeHtml(err.message)}</div>`;
+        document.getElementById("stockTitle").textContent = "データ読み込みエラー";
+      }
+    }
+
+    init();
   </script>
 </body>
 </html>
