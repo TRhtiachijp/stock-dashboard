@@ -596,12 +596,12 @@
       const bars = [];
       for (const t of times) {
         const drift = (nextRand() - 0.485) * (price * volatilityRatio);
-        const open = Math.max(50, Math.round((price + (nextRand() - 0.5) * (price * 0.004)) * 10) / 10);
-        const close = Math.max(50, Math.round((open + drift) * 10) / 10);
+        const open = Math.max(50, Math.round(price + (nextRand() - 0.5) * (price * 0.004)));
+        const close = Math.max(50, Math.round(open + drift));
         const wickUp = nextRand() * (price * volatilityRatio * 0.7);
         const wickDown = nextRand() * (price * volatilityRatio * 0.7);
-        const high = Math.round((Math.max(open, close) + wickUp) * 10) / 10;
-        const low = Math.max(20, Math.round((Math.min(open, close) - wickDown) * 10) / 10);
+        const high = Math.round(Math.max(open, close) + wickUp);
+        const low = Math.max(20, Math.round(Math.min(open, close) - wickDown));
         bars.push({ time: t, open, high, low, close });
         price = close;
       }
@@ -611,7 +611,8 @@
     function createSampleBars(stock, tf) {
       const codeSeed = seedFromCode(stock.code, "base");
       const tfSeed = seedFromCode(stock.code, tf);
-      const basePrice = 1200 + (codeSeed % 4800);
+      // 日本株の株価水準（6501 日立製作所は4,000円前後、その他は2,000〜9,000円台の整数）
+      const basePrice = String(stock.code).toUpperCase() === "6501" ? 4000 : 2000 + (codeSeed % 8000);
       const now = new Date();
       now.setHours(0, 0, 0, 0);
 
@@ -652,8 +653,10 @@
     function formatYen(value) {
       const num = Number(value);
       if (!Number.isFinite(num)) return "-";
-      return "¥" + num.toLocaleString("ja-JP", { maximumFractionDigits: 1 });
+      return `${Math.round(num).toLocaleString("ja-JP")}円`;
     }
+
+    const YEN_PRICE_FORMAT = { type: "custom", formatter: (price) => formatYen(price), minMove: 1 };
 
     function updateOhlcDisplay(bar) {
       if (!bar) return;
@@ -699,7 +702,7 @@
       });
 
       if (state.chartMode === "line") {
-        const lineSeries = chart.addLineSeries({ color: "#3b82f6", lineWidth: 2 });
+        const lineSeries = chart.addLineSeries({ color: "#3b82f6", lineWidth: 2, priceFormat: YEN_PRICE_FORMAT });
         lineSeries.setData(state.currentBars.map(b => ({ time: b.time, value: b.close })));
       } else {
         const candleSeries = chart.addCandlestickSeries({
@@ -708,7 +711,8 @@
           borderUpColor: "#ef4444",
           borderDownColor: "#22c55e",
           wickUpColor: "#ef4444",
-          wickDownColor: "#22c55e"
+          wickDownColor: "#22c55e",
+          priceFormat: YEN_PRICE_FORMAT
         });
         candleSeries.setData(state.currentBars);
       }
