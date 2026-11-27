@@ -649,13 +649,19 @@
       return typeof timeVal === "number" ? formatTimestampLabel(timeVal) : String(timeVal ?? "-");
     }
 
+    function formatYen(value) {
+      const num = Number(value);
+      if (!Number.isFinite(num)) return "-";
+      return "¥" + num.toLocaleString("ja-JP", { maximumFractionDigits: 1 });
+    }
+
     function updateOhlcDisplay(bar) {
       if (!bar) return;
       document.getElementById("ohlcTime").textContent = formatBarTimeForDisplay(bar.time);
-      document.getElementById("ohlcOpen").textContent = bar.open !== undefined ? Number(bar.open).toLocaleString("ja-JP") : "-";
-      document.getElementById("ohlcHigh").textContent = bar.high !== undefined ? Number(bar.high).toLocaleString("ja-JP") : "-";
-      document.getElementById("ohlcLow").textContent = bar.low !== undefined ? Number(bar.low).toLocaleString("ja-JP") : "-";
-      document.getElementById("ohlcClose").textContent = bar.close !== undefined ? Number(bar.close).toLocaleString("ja-JP") : "-";
+      document.getElementById("ohlcOpen").textContent = bar.open !== undefined ? formatYen(bar.open) : "-";
+      document.getElementById("ohlcHigh").textContent = bar.high !== undefined ? formatYen(bar.high) : "-";
+      document.getElementById("ohlcLow").textContent = bar.low !== undefined ? formatYen(bar.low) : "-";
+      document.getElementById("ohlcClose").textContent = bar.close !== undefined ? formatYen(bar.close) : "-";
     }
 
     function ensureChart() {
@@ -685,7 +691,11 @@
           timeVisible: tfMeta.isIntraday,
           secondsVisible: false
         },
-        localization: { timeFormatter: (time) => formatBarTimeForDisplay(time) }
+        localization: {
+          locale: "ja-JP",
+          timeFormatter: (time) => formatBarTimeForDisplay(time),
+          priceFormatter: (price) => formatYen(price)
+        }
       });
 
       if (state.chartMode === "line") {
