@@ -92,5 +92,12 @@
     "sector": "日本株",
     "irUrl": "https://finance.yahoo.co.jp/quote/7011.T/disclosure",
     "notes": ""
+  },
+  {
+    "code": "6740",
+    "name": "ジャパンディスプレイ",
+    "sector": "日本株",
+    "irUrl": "https://finance.yahoo.co.jp/quote/6740.T/disclosure",
+    "notes": ""
   }
 ]
