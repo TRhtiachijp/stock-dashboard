@@ -423,11 +423,11 @@
 
       <div class="chart-toolbar">
         <div class="toolbar-group" id="tfGroup">
-          <button type="button" class="ctrl-btn" data-tf="5m">5分</button>
-          <button type="button" class="ctrl-btn" data-tf="1h">1時間</button>
-          <button type="button" class="ctrl-btn active" data-tf="1M">1か月</button>
-          <button type="button" class="ctrl-btn" data-tf="1Y">1年</button>
-          <button type="button" class="ctrl-btn" data-tf="5Y">5年</button>
+          <button type="button" class="ctrl-btn" data-tf="5m">5m</button>
+          <button type="button" class="ctrl-btn" data-tf="1h">1h</button>
+          <button type="button" class="ctrl-btn active" data-tf="1M">1M</button>
+          <button type="button" class="ctrl-btn" data-tf="1Y">1Y</button>
+          <button type="button" class="ctrl-btn" data-tf="5Y">5Y</button>
         </div>
 
         <div class="toolbar-group" id="modeGroup">
@@ -790,7 +790,11 @@
           return;
         }
 
-        const code = document.getElementById("inputCode").value.trim();
+        const code = document.getElementById("inputCode").value.trim().toUpperCase();
+        if (!code) {
+          alert("銘柄コードを入力してください。");
+          return;
+        }
         const name = document.getElementById("inputName").value.trim();
         const irUrl = document.getElementById("inputIrUrl").value.trim();
         const noteText = document.getElementById("inputNotes").value.trim();
