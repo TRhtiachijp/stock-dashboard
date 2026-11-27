@@ -85,5 +85,12 @@
     "sector": "日本株",
     "irUrl": "https://finance.yahoo.co.jp/quote/5401.T/disclosure",
     "notes": ""
+  },
+  {
+    "code": "7011",
+    "name": "MITSUBISHI HEAVY INDUSTRIES",
+    "sector": "日本株",
+    "irUrl": "https://finance.yahoo.co.jp/quote/7011.T/disclosure",
+    "notes": ""
   }
 ]
