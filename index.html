@@ -243,6 +243,41 @@
       }
     }
 
+    .chart-wrap {
+      position: relative;
+    }
+
+    .chart-loading {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      color: var(--muted);
+      background: rgba(10, 16, 29, 0.72);
+      border-radius: 10px;
+      z-index: 5;
+    }
+
+    .chart-loading[hidden] {
+      display: none;
+    }
+
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
     .notes-section h3 {
       margin: 0 0 8px;
       font-size: 0.92rem;
@@ -449,7 +484,12 @@
         <span>終: <strong id="ohlcClose">-</strong></span>
       </div>
 
-      <div id="chartContainer"></div>
+      <div class="chart-wrap">
+        <div id="chartContainer"></div>
+        <div id="chartLoading" class="chart-loading" hidden>
+          <span class="spinner"></span>読み込み中...
+        </div>
+      </div>
     </div>
 
     <div class="card notes-section">
@@ -518,7 +558,9 @@
       timeframe: "1M",
       chartMode: "candle",
       chart: null,
-      currentBars: []
+      currentBars: [],
+      barsCache: new Map(),   // key: `${code}|${tf}` → GASから取得した bars
+      loadToken: 0            // 連続切替時に古いレスポンスを無視するための番号
     };
 
     function showToast(msg, duration = 3500) {
@@ -767,12 +809,112 @@
         notesEl.appendChild(li);
       });
 
-      if (stock.charts && Array.isArray(stock.charts[state.timeframe]) && stock.charts[state.timeframe].length > 0) {
-        state.currentBars = stock.charts[state.timeframe];
-      } else {
-        state.currentBars = createSampleBars(stock, state.timeframe);
+      loadChartBars(stock, state.timeframe);
+    }
+
+    // GASのバーを Lightweight Charts 用に整形（時刻の正規化・数値化・昇順・重複除去）
+    function normalizeBars(rawBars) {
+      if (!Array.isArray(rawBars)) return [];
+      const toTime = (t) => {
+        if (typeof t === "number" && Number.isFinite(t)) return t > 1e12 ? Math.floor(t / 1000) : t;
+        if (typeof t === "string") {
+          const s = t.trim();
+          if (/^\d+$/.test(s)) return toTime(Number(s));
+          if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+          const ms = Date.parse(s);
+          if (Number.isFinite(ms)) return Math.floor(ms / 1000);
+        }
+        return null;
+      };
+      const sortKey = (t) => typeof t === "number" ? t : Date.parse(t + "T00:00:00Z") / 1000;
+
+      const bars = rawBars
+        .map(b => ({
+          time: toTime(b && b.time),
+          open: Number(b && b.open),
+          high: Number(b && b.high),
+          low: Number(b && b.low),
+          close: Number(b && b.close)
+        }))
+        .filter(b => b.time !== null && [b.open, b.high, b.low, b.close].every(Number.isFinite))
+        .sort((a, b) => sortKey(a.time) - sortKey(b.time));
+
+      const deduped = [];
+      for (const b of bars) {
+        if (deduped.length > 0 && sortKey(deduped[deduped.length - 1].time) === sortKey(b.time)) {
+          deduped[deduped.length - 1] = b;
+        } else {
+          deduped.push(b);
+        }
+      }
+      return deduped;
+    }
+
+    async function fetchBarsFromGas(code, tf) {
+      const url = `${GAS_WEB_APP_URL}?code=${encodeURIComponent(code)}&tf=${encodeURIComponent(tf)}`;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 20000);
+      try {
+        const res = await fetch(url, { method: "GET", signal: controller.signal });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (data && data.ok === false) throw new Error(data.error || "取得に失敗しました");
+        const bars = normalizeBars(data && data.bars);
+        if (bars.length === 0) throw new Error("bars が空です");
+        return bars;
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
+    function setChartLoading(isLoading) {
+      document.getElementById("chartLoading").hidden = !isLoading;
+    }
+
+    function getFallbackBars(stock, tf) {
+      if (stock.charts && Array.isArray(stock.charts[tf]) && stock.charts[tf].length > 0) {
+        return stock.charts[tf];
+      }
+      return createSampleBars(stock, tf);
+    }
+
+    async function loadChartBars(stock, tf) {
+      const token = ++state.loadToken;
+      const cacheKey = `${String(stock.code).toUpperCase()}|${tf}`;
+
+      if (state.barsCache.has(cacheKey)) {
+        state.currentBars = state.barsCache.get(cacheKey);
+        setChartLoading(false);
+        ensureChart();
+        return;
       }
 
+      if (!GAS_WEB_APP_URL) {
+        state.currentBars = getFallbackBars(stock, tf);
+        ensureChart();
+        return;
+      }
+
+      setChartLoading(true);
+      let bars;
+      try {
+        bars = await fetchBarsFromGas(stock.code, tf);
+        state.barsCache.set(cacheKey, bars);
+      } catch (err) {
+        console.warn(`チャートデータ取得失敗 (${cacheKey}):`, err);
+        bars = null;
+      }
+
+      // 取得中に別の銘柄・時間足へ切り替えられていたら、この結果は捨てる
+      if (token !== state.loadToken) return;
+
+      setChartLoading(false);
+      if (bars) {
+        state.currentBars = bars;
+      } else {
+        state.currentBars = getFallbackBars(stock, tf);
+        showToast("株価データを取得できなかったため、サンプルデータを表示しています");
+      }
       ensureChart();
     }
 
