@@ -15,8 +15,6 @@
       --muted: #93a4bf;
       --accent: #3b82f6;
       --accent-soft: rgba(59, 130, 246, 0.16);
-      --up: #ef4444;
-      --down: #22c55e;
       --warn-bg: rgba(245, 158, 11, 0.12);
       --warn-border: rgba(245, 158, 11, 0.35);
       --warn-text: #fcd34d;
@@ -284,7 +282,7 @@
 
     #chartContainer {
       width: 100%;
-      height: 430px;
+      height: 440px;
       border-radius: 10px;
       overflow: hidden;
       border: 1px solid var(--border);
@@ -293,7 +291,7 @@
 
     @media (max-width: 600px) {
       #chartContainer {
-        height: 340px;
+        height: 350px;
       }
     }
 
@@ -340,9 +338,9 @@
     <div class="header-inner">
       <div class="brand">
         <h1>日本株 勉強ダッシュボード</h1>
-        <p>ウォッチリスト切替・Web内チャート操作・決算/ニュース確認・注目ポイント共有</p>
+        <p>5分〜最大5年チャート操作・ウォッチリスト切替・決算/ニュース確認・メモ共有</p>
       </div>
-      <div class="badge">Lightweight Charts 搭載</div>
+      <div class="badge">5分 / 1時間 / 1か月 / 1年 / 最大5年</div>
     </div>
   </header>
 
@@ -374,11 +372,17 @@
         </div>
 
         <div class="chart-toolbar">
+          <div class="toolbar-group" id="tfGroup">
+            <button type="button" class="ctrl-btn" data-tf="5m">5分</button>
+            <button type="button" class="ctrl-btn" data-tf="1h">1時間</button>
+            <button type="button" class="ctrl-btn active" data-tf="1M">1か月</button>
+            <button type="button" class="ctrl-btn" data-tf="1Y">1年</button>
+            <button type="button" class="ctrl-btn" data-tf="5Y">最大5年</button>
+          </div>
+
           <div class="toolbar-group" id="modeGroup">
             <button type="button" class="ctrl-btn active" data-mode="candle">ローソク足</button>
             <button type="button" class="ctrl-btn" data-mode="line">終値ライン</button>
-          </div>
-          <div class="toolbar-group">
             <button type="button" class="ctrl-btn" id="resetZoomBtn">表示リセット</button>
           </div>
         </div>
@@ -394,7 +398,7 @@
         <div id="chartContainer"></div>
 
         <div class="notice-box" id="dataNotice">
-          ※ 第1段階のため、チャートには銘柄コードをもとに生成したサンプル日足データを表示しています（マウスホイールで拡大・縮小、ドラッグで移動できます）。実際の株価データ（日足・分足）を接続する際は第2段階でデータソースを連携します。
+          ※ 現在は画面操作・時間足切替の検証用にサンプルデータを表示しています。実データ（日足・分足）を接続する際はデータソースを連携します。
         </div>
       </div>
 
@@ -406,17 +410,25 @@
   </main>
 
   <script>
+    const TIMEFRAME_META = {
+      "5m": { label: "5分足", isIntraday: true },
+      "1h": { label: "1時間足", isIntraday: true },
+      "1M": { label: "1か月（日足）", isIntraday: false },
+      "1Y": { label: "1年（日足）", isIntraday: false },
+      "5Y": { label: "最大5年（週足）", isIntraday: false }
+    };
+
     const state = {
       stocks: [],
       selectedIndex: 0,
+      timeframe: "1M",
       chartMode: "candle",
       chart: null,
-      mainSeries: null,
       currentBars: []
     };
 
-    function seedFromCode(code) {
-      const str = String(code || "6501");
+    function seedFromCode(code, tf) {
+      const str = `${code || "6501"}_${tf || "1M"}`;
       let hash = 2166136261;
       for (let i = 0; i < str.length; i++) {
         hash ^= str.charCodeAt(i);
@@ -425,48 +437,152 @@
       return Math.abs(hash >>> 0);
     }
 
-    function createSampleBars(stock, count = 90) {
-      const seed = seedFromCode(stock.code);
+    function formatDateStr(dateObj) {
+      const yyyy = dateObj.getFullYear();
+      const mm = String(dateObj.getMonth() + 1).padStart(2, "0");
+      const dd = String(dateObj.getDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function formatTimestampLabel(tsSec) {
+      const d = new Date(tsSec * 1000);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      const hh = String(d.getHours()).padStart(2, "0");
+      const min = String(d.getMinutes()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd} ${hh}:${min}`;
+    }
+
+    // 東証の取引時間（9:00〜11:30、12:30〜15:00、平日）の分足スロットを生成
+    function generateIntradayTimestamps(stepMinutes, tradingDaysCount) {
+      const slots = [];
+      const cursor = new Date();
+      cursor.setSeconds(0, 0);
+
+      // 直近の取引日ベースで遡る
+      const collectedDays = [];
+      const probe = new Date(cursor);
+      while (collectedDays.length < tradingDaysCount) {
+        const day = probe.getDay();
+        if (day !== 0 && day !== 6) {
+          collectedDays.push(new Date(probe));
+        }
+        probe.setDate(probe.getDate() - 1);
+      }
+      collectedDays.reverse();
+
+      const stepSec = stepMinutes * 60;
+
+      for (const dayDate of collectedDays) {
+        // 前場 09:00 - 11:30
+        const amStart = new Date(dayDate.getFullYear(), dayDate.getMonth(), dayDate.getDate(), 9, 0, 0);
+        const amEnd = new Date(dayDate.getFullYear(), dayDate.getMonth(), dayDate.getDate(), 11, 30, 0);
+        for (let t = Math.floor(amStart.getTime() / 1000); t <= Math.floor(amEnd.getTime() / 1000); t += stepSec) {
+          slots.push(t);
+        }
+
+        // 後場 12:30 - 15:00
+        const pmStart = new Date(dayDate.getFullYear(), dayDate.getMonth(), dayDate.getDate(), 12, 30, 0);
+        const pmEnd = new Date(dayDate.getFullYear(), dayDate.getMonth(), dayDate.getDate(), 15, 0, 0);
+        for (let t = Math.floor(pmStart.getTime() / 1000); t <= Math.floor(pmEnd.getTime() / 1000); t += stepSec) {
+          slots.push(t);
+        }
+      }
+
+      return slots;
+    }
+
+    function buildBarsFromTimes(times, basePrice, seed, volatilityRatio) {
       let rng = seed || 1234567;
       function nextRand() {
         rng = (Math.imul(rng, 1664525) + 1013904223) >>> 0;
         return rng / 4294967296;
       }
 
-      let price = 1500 + (seed % 4500);
+      let price = basePrice;
       const bars = [];
-      const now = new Date();
-      now.setHours(0, 0, 0, 0);
 
-      for (let i = count - 1; i >= 0; i--) {
-        const d = new Date(now);
-        d.setDate(now.getDate() - i);
-        const day = d.getDay();
-        if (day === 0 || day === 6) continue;
-
-        const yyyy = d.getFullYear();
-        const mm = String(d.getMonth() + 1).padStart(2, "0");
-        const dd = String(d.getDate()).padStart(2, "0");
-        const timeStr = `${yyyy}-${mm}-${dd}`;
-
-        const drift = (nextRand() - 0.48) * (price * 0.025);
-        const open = Math.max(100, Math.round((price + (nextRand() - 0.5) * 15) * 10) / 10);
-        const close = Math.max(100, Math.round((open + drift) * 10) / 10);
-        const wickUp = nextRand() * (price * 0.015);
-        const wickDown = nextRand() * (price * 0.015);
+      for (const t of times) {
+        const drift = (nextRand() - 0.485) * (price * volatilityRatio);
+        const open = Math.max(50, Math.round((price + (nextRand() - 0.5) * (price * 0.004)) * 10) / 10);
+        const close = Math.max(50, Math.round((open + drift) * 10) / 10);
+        const wickUp = nextRand() * (price * volatilityRatio * 0.7);
+        const wickDown = nextRand() * (price * volatilityRatio * 0.7);
         const high = Math.round((Math.max(open, close) + wickUp) * 10) / 10;
-        const low = Math.max(50, Math.round((Math.min(open, close) - wickDown) * 10) / 10);
+        const low = Math.max(20, Math.round((Math.min(open, close) - wickDown) * 10) / 10);
 
-        bars.push({ time: timeStr, open, high, low, close });
+        bars.push({ time: t, open, high, low, close });
         price = close;
       }
 
       return bars;
     }
 
+    function createSampleBars(stock, tf) {
+      const codeSeed = seedFromCode(stock.code, "base");
+      const tfSeed = seedFromCode(stock.code, tf);
+      const basePrice = 1200 + (codeSeed % 4800);
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+
+      if (tf === "5m") {
+        const times = generateIntradayTimestamps(5, 3);
+        return buildBarsFromTimes(times, basePrice, tfSeed, 0.006);
+      }
+
+      if (tf === "1h") {
+        const times = generateIntradayTimestamps(60, 15);
+        return buildBarsFromTimes(times, basePrice, tfSeed, 0.012);
+      }
+
+      if (tf === "1M") {
+        const dates = [];
+        for (let i = 30; i >= 0; i--) {
+          const d = new Date(now);
+          d.setDate(now.getDate() - i);
+          if (d.getDay() !== 0 && d.getDay() !== 6) {
+            dates.push(formatDateStr(d));
+          }
+        }
+        return buildBarsFromTimes(dates, basePrice, tfSeed, 0.022);
+      }
+
+      if (tf === "1Y") {
+        const dates = [];
+        for (let i = 365; i >= 0; i--) {
+          const d = new Date(now);
+          d.setDate(now.getDate() - i);
+          if (d.getDay() !== 0 && d.getDay() !== 6) {
+            dates.push(formatDateStr(d));
+          }
+        }
+        return buildBarsFromTimes(dates, basePrice, tfSeed, 0.025);
+      }
+
+      // "5Y"（最大5年・週足相当）
+      const dates = [];
+      for (let w = 260; w >= 0; w--) {
+        const d = new Date(now);
+        d.setDate(now.getDate() - w * 7);
+        while (d.getDay() === 0 || d.getDay() === 6) {
+          d.setDate(d.getDate() - 1);
+        }
+        dates.push(formatDateStr(d));
+      }
+      return buildBarsFromTimes(dates, basePrice, tfSeed, 0.045);
+    }
+
+    function formatBarTimeForDisplay(timeVal) {
+      if (typeof timeVal === "number") {
+        return formatTimestampLabel(timeVal);
+      }
+      return String(timeVal ?? "-");
+    }
+
     function updateOhlcDisplay(bar) {
       if (!bar) return;
-      document.getElementById("ohlcTime").textContent = bar.time ?? "-";
+      document.getElementById("ohlcTime").textContent = formatBarTimeForDisplay(bar.time);
       document.getElementById("ohlcOpen").textContent = bar.open !== undefined ? Number(bar.open).toLocaleString("ja-JP") : "-";
       document.getElementById("ohlcHigh").textContent = bar.high !== undefined ? Number(bar.high).toLocaleString("ja-JP") : "-";
       document.getElementById("ohlcLow").textContent = bar.low !== undefined ? Number(bar.low).toLocaleString("ja-JP") : "-";
@@ -478,8 +594,9 @@
       if (state.chart) {
         state.chart.remove();
         state.chart = null;
-        state.mainSeries = null;
       }
+
+      const tfMeta = TIMEFRAME_META[state.timeframe] || TIMEFRAME_META["1M"];
 
       const chart = LightweightCharts.createChart(container, {
         width: container.clientWidth,
@@ -500,20 +617,22 @@
         },
         timeScale: {
           borderColor: "#26344f",
-          timeVisible: true,
+          timeVisible: tfMeta.isIntraday,
           secondsVisible: false
+        },
+        localization: {
+          timeFormatter: (time) => formatBarTimeForDisplay(time)
         }
       });
 
-      let series;
       if (state.chartMode === "line") {
-        series = chart.addLineSeries({
+        const lineSeries = chart.addLineSeries({
           color: "#3b82f6",
           lineWidth: 2
         });
-        series.setData(state.currentBars.map(b => ({ time: b.time, value: b.close })));
+        lineSeries.setData(state.currentBars.map(b => ({ time: b.time, value: b.close })));
       } else {
-        series = chart.addCandlestickSeries({
+        const candleSeries = chart.addCandlestickSeries({
           upColor: "#ef4444",
           downColor: "#22c55e",
           borderUpColor: "#ef4444",
@@ -521,13 +640,13 @@
           wickUpColor: "#ef4444",
           wickDownColor: "#22c55e"
         });
-        series.setData(state.currentBars);
+        candleSeries.setData(state.currentBars);
       }
 
       chart.timeScale().fitContent();
 
       chart.subscribeCrosshairMove(param => {
-        if (!param || !param.time) {
+        if (!param || param.time === undefined) {
           if (state.currentBars.length > 0) {
             updateOhlcDisplay(state.currentBars[state.currentBars.length - 1]);
           }
@@ -540,7 +659,6 @@
       });
 
       state.chart = chart;
-      state.mainSeries = series;
 
       if (state.currentBars.length > 0) {
         updateOhlcDisplay(state.currentBars[state.currentBars.length - 1]);
@@ -567,6 +685,14 @@
         });
         listEl.appendChild(btn);
       });
+    }
+
+    function getBarsForCurrentSelection(stock, tf) {
+      // 将来的に stock.charts[tf]（例: { "5m": [...], "1h": [...], "1M": [...], "1Y": [...], "5Y": [...] }）があれば優先利用
+      if (stock.charts && Array.isArray(stock.charts[tf]) && stock.charts[tf].length > 0) {
+        return { bars: stock.charts[tf], fromRealData: true };
+      }
+      return { bars: createSampleBars(stock, tf), fromRealData: false };
     }
 
     function renderSelectedStock() {
@@ -604,13 +730,15 @@
         notesEl.appendChild(li);
       });
 
+      const tfMeta = TIMEFRAME_META[state.timeframe] || TIMEFRAME_META["1M"];
+      const { bars, fromRealData } = getBarsForCurrentSelection(stock, state.timeframe);
+      state.currentBars = bars;
+
       const noticeEl = document.getElementById("dataNotice");
-      if (Array.isArray(stock.candles) && stock.candles.length > 0) {
-        state.currentBars = stock.candles;
-        noticeEl.textContent = "※ stocks.json 内の価格データを表示しています。マウスホイールで拡大・縮小、ドラッグで横スクロールできます。";
+      if (fromRealData) {
+        noticeEl.textContent = `※ ${tfMeta.label}のデータを表示中です。ホイールで拡大・縮小、ドラッグで移動できます。`;
       } else {
-        state.currentBars = createSampleBars(stock, 90);
-        noticeEl.textContent = "※ 第1段階のため、銘柄コードをもとに生成したサンプル日足データを表示しています（マウスホイールで拡大・縮小、ドラッグで移動できます）。実際の株価データ（日足・分足）を接続する際は第2段階でデータソースを連携します。";
+        noticeEl.textContent = `※ 「${tfMeta.label}」の操作検証用サンプルを表示中です（ホイールで拡大・縮小、ドラッグで移動できます）。実際の株価データ（分足・日足・長期足）をつなぐ際は、各銘柄データに "${state.timeframe}" 配列を渡すことで差し替えられます。`;
       }
 
       ensureChart();
@@ -626,9 +754,18 @@
     }
 
     function bindControls() {
-      document.querySelectorAll("#modeGroup .ctrl-btn").forEach(btn => {
+      document.querySelectorAll("#tfGroup .ctrl-btn").forEach(btn => {
         btn.addEventListener("click", () => {
-          document.querySelectorAll("#modeGroup .ctrl-btn").forEach(b => b.classList.remove("active"));
+          document.querySelectorAll("#tfGroup .ctrl-btn").forEach(b => b.classList.remove("active"));
+          btn.classList.add("active");
+          state.timeframe = btn.dataset.tf;
+          renderSelectedStock();
+        });
+      });
+
+      document.querySelectorAll("#modeGroup .ctrl-btn[data-mode]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll("#modeGroup .ctrl-btn[data-mode]").forEach(b => b.classList.remove("active"));
           btn.classList.add("active");
           state.chartMode = btn.dataset.mode;
           ensureChart();
