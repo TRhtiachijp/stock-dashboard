@@ -261,6 +261,22 @@
       z-index: 5;
     }
 
+    .chart-error {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      text-align: center;
+      font-size: 0.82rem;
+      color: #fca5a5;
+      background: rgba(10, 16, 29, 0.92);
+      border-radius: 10px;
+      z-index: 4;
+    }
+
+    .chart-error[hidden],
     .chart-loading[hidden] {
       display: none;
     }
@@ -487,8 +503,9 @@
       <div class="chart-wrap">
         <div id="chartContainer"></div>
         <div id="chartLoading" class="chart-loading" hidden>
-          <span class="spinner"></span>読み込み中...
+          <span class="spinner"></span>株価データ取得中...
         </div>
+        <div id="chartError" class="chart-error" hidden></div>
       </div>
     </div>
 
@@ -571,125 +588,26 @@
       el._timer = setTimeout(() => { el.style.display = "none"; }, duration);
     }
 
-    function seedFromCode(code, tf) {
-      const str = `${code || "6501"}_${tf || "1M"}`;
-      let hash = 2166136261;
-      for (let i = 0; i < str.length; i++) {
-        hash ^= str.charCodeAt(i);
-        hash = Math.imul(hash, 16777619);
-      }
-      return Math.abs(hash >>> 0);
-    }
-
-    function formatDateStr(dateObj) {
-      const yyyy = dateObj.getFullYear();
-      const mm = String(dateObj.getMonth() + 1).padStart(2, "0");
-      const dd = String(dateObj.getDate()).padStart(2, "0");
-      return `${yyyy}-${mm}-${dd}`;
-    }
+    // UNIXタイムスタンプは normalizeBars で +9時間（JST）にずらしてあるので UTC として読む
+    const JST_OFFSET_SEC = 9 * 3600;
 
     function formatTimestampLabel(tsSec) {
       const d = new Date(tsSec * 1000);
-      const mm = String(d.getMonth() + 1).padStart(2, "0");
-      const dd = String(d.getDate()).padStart(2, "0");
-      const hh = String(d.getHours()).padStart(2, "0");
-      const min = String(d.getMinutes()).padStart(2, "0");
-      return `${mm}/${dd} ${hh}:${min}`;
-    }
-
-    function generateIntradayTimestamps(stepMinutes, tradingDaysCount) {
-      const slots = [];
-      const cursor = new Date();
-      cursor.setSeconds(0, 0);
-
-      const collectedDays = [];
-      const probe = new Date(cursor);
-      while (collectedDays.length < tradingDaysCount) {
-        const day = probe.getDay();
-        if (day !== 0 && day !== 6) collectedDays.push(new Date(probe));
-        probe.setDate(probe.getDate() - 1);
-      }
-      collectedDays.reverse();
-
-      const stepSec = stepMinutes * 60;
-      for (const dayDate of collectedDays) {
-        const amStart = new Date(dayDate.getFullYear(), dayDate.getMonth(), dayDate.getDate(), 9, 0, 0);
-        const amEnd = new Date(dayDate.getFullYear(), dayDate.getMonth(), dayDate.getDate(), 11, 30, 0);
-        for (let t = Math.floor(amStart.getTime() / 1000); t <= Math.floor(amEnd.getTime() / 1000); t += stepSec) {
-          slots.push(t);
-        }
-        const pmStart = new Date(dayDate.getFullYear(), dayDate.getMonth(), dayDate.getDate(), 12, 30, 0);
-        const pmEnd = new Date(dayDate.getFullYear(), dayDate.getMonth(), dayDate.getDate(), 15, 0, 0);
-        for (let t = Math.floor(pmStart.getTime() / 1000); t <= Math.floor(pmEnd.getTime() / 1000); t += stepSec) {
-          slots.push(t);
-        }
-      }
-      return slots;
-    }
-
-    function buildBarsFromTimes(times, basePrice, seed, volatilityRatio) {
-      let rng = seed || 1234567;
-      function nextRand() {
-        rng = (Math.imul(rng, 1664525) + 1013904223) >>> 0;
-        return rng / 4294967296;
-      }
-
-      let price = basePrice;
-      const bars = [];
-      for (const t of times) {
-        const drift = (nextRand() - 0.485) * (price * volatilityRatio);
-        const open = Math.max(50, Math.round(price + (nextRand() - 0.5) * (price * 0.004)));
-        const close = Math.max(50, Math.round(open + drift));
-        const wickUp = nextRand() * (price * volatilityRatio * 0.7);
-        const wickDown = nextRand() * (price * volatilityRatio * 0.7);
-        const high = Math.round(Math.max(open, close) + wickUp);
-        const low = Math.max(20, Math.round(Math.min(open, close) - wickDown));
-        bars.push({ time: t, open, high, low, close });
-        price = close;
-      }
-      return bars;
-    }
-
-    function createSampleBars(stock, tf) {
-      const codeSeed = seedFromCode(stock.code, "base");
-      const tfSeed = seedFromCode(stock.code, tf);
-      // 日本株の株価水準（6501 日立製作所は4,000円前後、その他は2,000〜9,000円台の整数）
-      const basePrice = String(stock.code).toUpperCase() === "6501" ? 4000 : 2000 + (codeSeed % 8000);
-      const now = new Date();
-      now.setHours(0, 0, 0, 0);
-
-      if (tf === "5m") return buildBarsFromTimes(generateIntradayTimestamps(5, 3), basePrice, tfSeed, 0.006);
-      if (tf === "1h") return buildBarsFromTimes(generateIntradayTimestamps(60, 15), basePrice, tfSeed, 0.012);
-      if (tf === "1M") {
-        const dates = [];
-        for (let i = 30; i >= 0; i--) {
-          const d = new Date(now);
-          d.setDate(now.getDate() - i);
-          if (d.getDay() !== 0 && d.getDay() !== 6) dates.push(formatDateStr(d));
-        }
-        return buildBarsFromTimes(dates, basePrice, tfSeed, 0.022);
-      }
-      if (tf === "1Y") {
-        const dates = [];
-        for (let i = 365; i >= 0; i--) {
-          const d = new Date(now);
-          d.setDate(now.getDate() - i);
-          if (d.getDay() !== 0 && d.getDay() !== 6) dates.push(formatDateStr(d));
-        }
-        return buildBarsFromTimes(dates, basePrice, tfSeed, 0.025);
-      }
-      const dates = [];
-      for (let w = 260; w >= 0; w--) {
-        const d = new Date(now);
-        d.setDate(now.getDate() - w * 7);
-        while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() - 1);
-        dates.push(formatDateStr(d));
-      }
-      return buildBarsFromTimes(dates, basePrice, tfSeed, 0.045);
+      const yyyy = d.getUTCFullYear();
+      const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+      const dd = String(d.getUTCDate()).padStart(2, "0");
+      const hh = String(d.getUTCHours()).padStart(2, "0");
+      const min = String(d.getUTCMinutes()).padStart(2, "0");
+      const tfMeta = TIMEFRAME_META[state.timeframe] || TIMEFRAME_META["1M"];
+      return tfMeta.isIntraday ? `${mm}/${dd} ${hh}:${min}` : `${yyyy}/${mm}/${dd}`;
     }
 
     function formatBarTimeForDisplay(timeVal) {
-      return typeof timeVal === "number" ? formatTimestampLabel(timeVal) : String(timeVal ?? "-");
+      if (typeof timeVal === "number") return formatTimestampLabel(timeVal);
+      if (timeVal && typeof timeVal === "object" && "year" in timeVal) {
+        return `${timeVal.year}/${String(timeVal.month).padStart(2, "0")}/${String(timeVal.day).padStart(2, "0")}`;
+      }
+      return String(timeVal ?? "-").replace(/-/g, "/");
     }
 
     function formatYen(value) {
@@ -744,10 +662,10 @@
       });
 
       if (state.chartMode === "line") {
-        const lineSeries = chart.addLineSeries({ color: "#3b82f6", lineWidth: 2, priceFormat: YEN_PRICE_FORMAT });
-        lineSeries.setData(state.currentBars.map(b => ({ time: b.time, value: b.close })));
+        const series = chart.addLineSeries({ color: "#3b82f6", lineWidth: 2, priceFormat: YEN_PRICE_FORMAT });
+        series.setData(state.currentBars.map(b => ({ time: b.time, value: b.close })));
       } else {
-        const candleSeries = chart.addCandlestickSeries({
+        const series = chart.addCandlestickSeries({
           upColor: "#ef4444",
           downColor: "#22c55e",
           borderUpColor: "#ef4444",
@@ -756,7 +674,7 @@
           wickDownColor: "#22c55e",
           priceFormat: YEN_PRICE_FORMAT
         });
-        candleSeries.setData(state.currentBars);
+        series.setData(state.currentBars);
       }
 
       chart.timeScale().fitContent();
@@ -765,7 +683,8 @@
           if (state.currentBars.length > 0) updateOhlcDisplay(state.currentBars[state.currentBars.length - 1]);
           return;
         }
-        const found = state.currentBars.find(b => b.time === param.time);
+        // param.logical は setData したバー配列のインデックスと一致する
+        const found = Number.isInteger(param.logical) ? state.currentBars[param.logical] : null;
         if (found) updateOhlcDisplay(found);
       });
 
@@ -816,13 +735,13 @@
     function normalizeBars(rawBars) {
       if (!Array.isArray(rawBars)) return [];
       const toTime = (t) => {
-        if (typeof t === "number" && Number.isFinite(t)) return t > 1e12 ? Math.floor(t / 1000) : t;
+        if (typeof t === "number" && Number.isFinite(t)) return (t > 1e12 ? Math.floor(t / 1000) : t) + JST_OFFSET_SEC;
         if (typeof t === "string") {
           const s = t.trim();
           if (/^\d+$/.test(s)) return toTime(Number(s));
           if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
           const ms = Date.parse(s);
-          if (Number.isFinite(ms)) return Math.floor(ms / 1000);
+          if (Number.isFinite(ms)) return Math.floor(ms / 1000) + JST_OFFSET_SEC;
         }
         return null;
       };
@@ -857,7 +776,13 @@
       try {
         const res = await fetch(url, { method: "GET", signal: controller.signal });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
+        const text = await res.text();
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch (_) {
+          throw new Error("GASからJSONが返されませんでした（doGet が未実装、または最新版が未デプロイの可能性があります）");
+        }
         if (data && data.ok === false) throw new Error(data.error || "取得に失敗しました");
         const bars = normalizeBars(data && data.bars);
         if (bars.length === 0) throw new Error("bars が空です");
@@ -871,38 +796,62 @@
       document.getElementById("chartLoading").hidden = !isLoading;
     }
 
-    function getFallbackBars(stock, tf) {
-      if (stock.charts && Array.isArray(stock.charts[tf]) && stock.charts[tf].length > 0) {
-        return stock.charts[tf];
+    function setOhlcMessage(msg) {
+      document.getElementById("ohlcTime").textContent = msg;
+      ["ohlcOpen", "ohlcHigh", "ohlcLow", "ohlcClose"].forEach(id => {
+        document.getElementById(id).textContent = "-";
+      });
+    }
+
+    function showChartError(message) {
+      const el = document.getElementById("chartError");
+      el.textContent = `株価データを取得できませんでした: ${message}`;
+      el.hidden = false;
+    }
+
+    function hideChartError() {
+      document.getElementById("chartError").hidden = true;
+    }
+
+    function clearChart() {
+      if (state.chart) {
+        state.chart.remove();
+        state.chart = null;
       }
-      return createSampleBars(stock, tf);
+      state.currentBars = [];
     }
 
     async function loadChartBars(stock, tf) {
       const token = ++state.loadToken;
       const cacheKey = `${String(stock.code).toUpperCase()}|${tf}`;
-
-      if (state.barsCache.has(cacheKey)) {
-        state.currentBars = state.barsCache.get(cacheKey);
-        setChartLoading(false);
-        ensureChart();
-        return;
-      }
+      hideChartError();
 
       if (!GAS_WEB_APP_URL) {
-        state.currentBars = getFallbackBars(stock, tf);
-        ensureChart();
+        clearChart();
+        setOhlcMessage("取得エラー");
+        showChartError("GAS_WEB_APP_URL が設定されていません");
         return;
       }
 
+      // 取得済みならまず即表示（最新データは下のGETで必ず取り直す）
+      const cached = state.barsCache.get(cacheKey);
+      if (cached) {
+        state.currentBars = cached;
+        ensureChart();
+      } else {
+        clearChart();
+        setOhlcMessage("株価データ取得中...");
+      }
       setChartLoading(true);
-      let bars;
+
+      let bars = null;
+      let errorMessage = "";
       try {
         bars = await fetchBarsFromGas(stock.code, tf);
         state.barsCache.set(cacheKey, bars);
       } catch (err) {
+        errorMessage = err && err.name === "AbortError" ? "タイムアウトしました" : (err && err.message) || String(err);
         console.warn(`チャートデータ取得失敗 (${cacheKey}):`, err);
-        bars = null;
       }
 
       // 取得中に別の銘柄・時間足へ切り替えられていたら、この結果は捨てる
@@ -911,11 +860,14 @@
       setChartLoading(false);
       if (bars) {
         state.currentBars = bars;
+        ensureChart();
+      } else if (!cached) {
+        clearChart();
+        setOhlcMessage("取得エラー");
+        showChartError(errorMessage);
       } else {
-        state.currentBars = getFallbackBars(stock, tf);
-        showToast("株価データを取得できなかったため、サンプルデータを表示しています");
+        showToast(`最新データの取得に失敗しました（前回取得分を表示中）: ${errorMessage}`);
       }
-      ensureChart();
     }
 
     function escapeHtml(str) {
