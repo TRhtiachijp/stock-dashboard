@@ -3,20 +3,23 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>日本株 勉強ダッシュボード</title>
+  <title>JPX EQUITY LAB | 日本株リサーチ＆チャート</title>
   <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
   <style>
     :root {
-      --bg: #0b101b;
-      --panel: #121a2a;
-      --panel-2: #182236;
-      --border: #26344f;
-      --text: #e6edf7;
-      --muted: #93a4bf;
+      --bg: #070b14;
+      --panel: #0f1624;
+      --panel-2: #162033;
+      --panel-hover: #1c2942;
+      --border: #23314d;
+      --text: #f1f5f9;
+      --muted: #8b9bb4;
       --accent: #3b82f6;
-      --accent-soft: rgba(59, 130, 246, 0.16);
-      --warn-bg: rgba(245, 158, 11, 0.12);
-      --warn-border: rgba(245, 158, 11, 0.35);
+      --accent-hover: #2563eb;
+      --accent-soft: rgba(59, 130, 246, 0.14);
+      --emerald: #10b981;
+      --warn-bg: rgba(245, 158, 11, 0.1);
+      --warn-border: rgba(245, 158, 11, 0.3);
       --warn-text: #fcd34d;
     }
 
@@ -26,92 +29,197 @@
 
     body {
       margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Sans", "Noto Sans JP", sans-serif;
-      background: var(--bg);
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Sans", "Noto Sans JP", sans-serif;
+      background: radial-gradient(circle at top right, #111c33 0%, var(--bg) 45%);
       color: var(--text);
       line-height: 1.6;
+      min-height: 100vh;
     }
 
+    /* スタイリッシュなブランドヘッダー */
     header {
       border-bottom: 1px solid var(--border);
-      background: rgba(18, 26, 42, 0.9);
-      backdrop-filter: blur(8px);
+      background: rgba(9, 14, 26, 0.85);
+      backdrop-filter: blur(12px);
       position: sticky;
       top: 0;
-      z-index: 10;
+      z-index: 20;
     }
 
     .header-inner {
-      max-width: 1280px;
+      max-width: 1340px;
       margin: 0 auto;
-      padding: 14px 20px;
+      padding: 14px 24px;
       display: flex;
       flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
+      gap: 14px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
       gap: 12px;
     }
 
-    .brand h1 {
+    .brand-logo {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      font-size: 0.95rem;
+      color: #fff;
+      letter-spacing: -0.03em;
+      box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35);
+    }
+
+    .brand-title {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+    }
+
+    .brand-title h1 {
       margin: 0;
       font-size: 1.15rem;
-      font-weight: 700;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      background: linear-gradient(90deg, #ffffff 0%, #93c5fd 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
     }
 
-    .brand p {
-      margin: 2px 0 0;
-      font-size: 0.82rem;
+    .brand-tag {
+      font-size: 0.72rem;
+      font-weight: 600;
       color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
     }
 
-    .badge {
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .status-pill {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 7px;
       padding: 6px 12px;
       border-radius: 999px;
-      background: var(--accent-soft);
-      border: 1px solid rgba(59, 130, 246, 0.35);
-      color: #93c5fd;
-      font-size: 0.8rem;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #6ee7b7;
+      font-size: 0.76rem;
       font-weight: 600;
     }
 
-    .container {
-      max-width: 1280px;
-      margin: 0 auto;
-      padding: 20px;
-      display: grid;
-      grid-template-columns: 280px 1fr;
-      gap: 20px;
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--emerald);
+      box-shadow: 0 0 8px var(--emerald);
     }
 
-    @media (max-width: 900px) {
+    .primary-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 10px;
+      border: none;
+      background: linear-gradient(135deg, var(--accent) 0%, #2563eb 100%);
+      color: #fff;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+      transition: transform 0.12s ease, box-shadow 0.12s ease;
+    }
+
+    .primary-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(37, 99, 235, 0.45);
+    }
+
+    .container {
+      max-width: 1340px;
+      margin: 0 auto;
+      padding: 22px 24px;
+      display: grid;
+      grid-template-columns: 290px 1fr;
+      gap: 22px;
+    }
+
+    @media (max-width: 920px) {
       .container {
         grid-template-columns: 1fr;
+        padding: 16px;
       }
     }
 
     .sidebar {
       background: var(--panel);
       border: 1px solid var(--border);
-      border-radius: 14px;
+      border-radius: 16px;
       padding: 16px;
       height: fit-content;
     }
 
+    .sidebar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
     .sidebar-title {
-      font-size: 0.85rem;
+      font-size: 0.78rem;
       font-weight: 700;
       color: var(--muted);
-      letter-spacing: 0.04em;
-      margin: 0 0 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin: 0;
+    }
+
+    .count-badge {
+      font-size: 0.74rem;
+      color: #93c5fd;
+      background: var(--accent-soft);
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-weight: 700;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 8px 12px;
+      margin-bottom: 12px;
+      border-radius: 9px;
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      color: var(--text);
+      font-size: 0.84rem;
+      outline: none;
+    }
+
+    .search-input:focus {
+      border-color: var(--accent);
     }
 
     .stock-list {
       display: flex;
       flex-direction: column;
       gap: 8px;
+      max-height: 68vh;
+      overflow-y: auto;
     }
 
     .stock-btn {
@@ -119,15 +227,16 @@
       text-align: left;
       background: var(--panel-2);
       border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 10px 12px;
+      border-radius: 11px;
+      padding: 11px 13px;
       color: var(--text);
       cursor: pointer;
-      transition: border-color 0.15s ease, background 0.15s ease;
+      transition: all 0.15s ease;
     }
 
     .stock-btn:hover {
-      border-color: #476294;
+      background: var(--panel-hover);
+      border-color: #3b527e;
     }
 
     .stock-btn.active {
@@ -135,20 +244,27 @@
       border-color: var(--accent);
     }
 
+    .stock-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
     .stock-code {
       font-size: 0.78rem;
-      color: #93c5fd;
-      font-weight: 700;
+      color: #60a5fa;
+      font-weight: 800;
+      letter-spacing: 0.04em;
     }
 
     .stock-name {
-      font-size: 0.95rem;
+      font-size: 0.96rem;
       font-weight: 700;
       margin-top: 2px;
     }
 
     .stock-sector {
-      font-size: 0.76rem;
+      font-size: 0.75rem;
       color: var(--muted);
       margin-top: 2px;
     }
@@ -162,8 +278,8 @@
     .card {
       background: var(--panel);
       border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 18px;
+      border-radius: 16px;
+      padding: 20px;
     }
 
     .stock-header {
@@ -171,13 +287,14 @@
       flex-wrap: wrap;
       align-items: flex-start;
       justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 14px;
+      gap: 14px;
+      margin-bottom: 16px;
     }
 
     .stock-heading h2 {
       margin: 0;
-      font-size: 1.35rem;
+      font-size: 1.4rem;
+      letter-spacing: -0.01em;
     }
 
     .meta-row {
@@ -186,7 +303,7 @@
       align-items: center;
       gap: 8px;
       margin-top: 6px;
-      font-size: 0.84rem;
+      font-size: 0.82rem;
       color: var(--muted);
     }
 
@@ -195,8 +312,8 @@
       border: 1px solid var(--border);
       border-radius: 999px;
       padding: 2px 10px;
-      font-size: 0.78rem;
-      color: var(--text);
+      font-size: 0.76rem;
+      color: #cbd5e1;
     }
 
     .quick-links {
@@ -209,15 +326,15 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      padding: 8px 12px;
+      padding: 7px 12px;
       border-radius: 9px;
       border: 1px solid var(--border);
       background: var(--panel-2);
       color: var(--text);
       text-decoration: none;
-      font-size: 0.84rem;
+      font-size: 0.82rem;
       font-weight: 600;
-      transition: border-color 0.15s ease, background 0.15s ease;
+      transition: all 0.15s ease;
     }
 
     .link-btn:hover {
@@ -246,7 +363,7 @@
       border: 1px solid var(--border);
       color: var(--text);
       border-radius: 8px;
-      padding: 6px 10px;
+      padding: 6px 11px;
       font-size: 0.8rem;
       font-weight: 600;
       cursor: pointer;
@@ -265,13 +382,13 @@
     .ohlc-bar {
       display: flex;
       flex-wrap: wrap;
-      gap: 12px;
+      gap: 14px;
       font-size: 0.82rem;
       color: var(--muted);
       margin-bottom: 10px;
-      padding: 8px 12px;
+      padding: 8px 14px;
       background: var(--panel-2);
-      border-radius: 8px;
+      border-radius: 9px;
       border: 1px solid var(--border);
     }
 
@@ -283,15 +400,15 @@
     #chartContainer {
       width: 100%;
       height: 440px;
-      border-radius: 10px;
+      border-radius: 11px;
       overflow: hidden;
       border: 1px solid var(--border);
-      background: #0d1422;
+      background: #0a101d;
     }
 
     @media (max-width: 600px) {
       #chartContainer {
-        height: 350px;
+        height: 340px;
       }
     }
 
@@ -302,12 +419,15 @@
       background: var(--warn-bg);
       border: 1px solid var(--warn-border);
       color: var(--warn-text);
-      font-size: 0.82rem;
+      font-size: 0.8rem;
     }
 
     .notes-section h3 {
-      margin: 0 0 10px;
+      margin: 0 0 12px;
       font-size: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
     .notes-list {
@@ -315,12 +435,130 @@
       padding-left: 20px;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 8px;
     }
 
     .notes-list li {
-      color: var(--text);
+      color: #e2e8f0;
       font-size: 0.92rem;
+    }
+
+    /* モーダル（サイト内銘柄追加フォーム） */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(3, 7, 18, 0.78);
+      backdrop-filter: blur(6px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 50;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal-card {
+      width: 100%;
+      max-width: 480px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 22px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .modal-header h3 {
+      margin: 0;
+      font-size: 1.1rem;
+    }
+
+    .close-btn {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      font-size: 1.4rem;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #cbd5e1;
+      margin-bottom: 5px;
+    }
+
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      padding: 9px 12px;
+      border-radius: 9px;
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      color: var(--text);
+      font-size: 0.9rem;
+      font-family: inherit;
+      outline: none;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus {
+      border-color: var(--accent);
+    }
+
+    .form-hint {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .ghost-btn {
+      padding: 8px 14px;
+      border-radius: 9px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      background: #1e293b;
+      border: 1px solid var(--accent);
+      color: #fff;
+      font-size: 0.85rem;
+      font-weight: 600;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
+      z-index: 60;
+      display: none;
     }
 
     .error-box {
@@ -337,16 +575,30 @@
   <header>
     <div class="header-inner">
       <div class="brand">
-        <h1>日本株 勉強ダッシュボード</h1>
-        <p>5分〜最大5年チャート操作・ウォッチリスト切替・決算/ニュース確認・メモ共有</p>
+        <div class="brand-logo">JPX</div>
+        <div class="brand-title">
+          <h1>JPX EQUITY LAB</h1>
+          <span class="brand-tag">Tokyo Market Research</span>
+        </div>
       </div>
-      <div class="badge">5分 / 1時間 / 1か月 / 1年 / 最大5年</div>
+
+      <div class="header-actions">
+        <div class="status-pill">
+          <span class="status-dot"></span>
+          <span>SYNCED</span>
+        </div>
+        <button type="button" class="primary-btn" id="openAddModalBtn">＋ 銘柄を追加</button>
+      </div>
     </div>
   </header>
 
   <main class="container">
     <aside class="sidebar">
-      <h2 class="sidebar-title">登録銘柄（stocks.json）</h2>
+      <div class="sidebar-header">
+        <h2 class="sidebar-title">Watchlist</h2>
+        <span class="count-badge" id="stockCount">0</span>
+      </div>
+      <input type="text" id="searchInput" class="search-input" placeholder="コード・企業名で絞り込み..." />
       <div id="stockList" class="stock-list"></div>
     </aside>
 
@@ -366,7 +618,7 @@
           <div class="quick-links">
             <a id="yahooLink" class="link-btn" href="#" target="_blank" rel="noopener noreferrer">Yahoo!ファイナンス</a>
             <a id="kabutanLink" class="link-btn" href="#" target="_blank" rel="noopener noreferrer">株探</a>
-            <a id="tvLink" class="link-btn" href="#" target="_blank" rel="noopener noreferrer">TradingViewで開く</a>
+            <a id="tvLink" class="link-btn" href="#" target="_blank" rel="noopener noreferrer">TradingView</a>
             <a id="irLink" class="link-btn" href="#" target="_blank" rel="noopener noreferrer" style="display:none;">公式IR</a>
           </div>
         </div>
@@ -398,18 +650,60 @@
         <div id="chartContainer"></div>
 
         <div class="notice-box" id="dataNotice">
-          ※ 現在は画面操作・時間足切替の検証用にサンプルデータを表示しています。実データ（日足・分足）を接続する際はデータソースを連携します。
+          ※ チャートはホイールで拡大・縮小、ドラッグで移動できます。
         </div>
       </div>
 
       <div class="card notes-section">
-        <h3>注目ポイント・勉強メモ</h3>
+        <h3>企業概要・決算チェックポイント</h3>
         <ul id="notesList" class="notes-list"></ul>
       </div>
     </section>
   </main>
 
+  <!-- サイト内 銘柄追加モーダル -->
+  <div class="modal-backdrop" id="addModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>ウォッチリストに銘柄を追加</h3>
+        <button type="button" class="close-btn" id="closeAddModalBtn">&times;</button>
+      </div>
+      <form id="addStockForm">
+        <div class="form-group">
+          <label for="inputCode">銘柄コード（必須）</label>
+          <input type="text" id="inputCode" placeholder="例: 8035" required />
+        </div>
+        <div class="form-group">
+          <label for="inputName">企業名（必須）</label>
+          <input type="text" id="inputName" placeholder="例: 東京エレクトロン" required />
+        </div>
+        <div class="form-group">
+          <label for="inputSector">セクター（任意）</label>
+          <input type="text" id="inputSector" placeholder="空欄なら自動判定・未分類" />
+        </div>
+        <div class="form-group">
+          <label for="inputNotes">企業概要・決算チェックポイント（任意）</label>
+          <textarea id="inputNotes" rows="3" placeholder="空欄のまま送信すると、AIが企業概要と決算チェックポイントを自動作成します"></textarea>
+          <div class="form-hint">改行すると複数の箇条書きとして登録されます。</div>
+        </div>
+        <div class="form-group">
+          <label for="inputPasscode">メンバーパスコード（設定時のみ）</label>
+          <input type="password" id="inputPasscode" placeholder="管理者から共有されたパスコード" />
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="ghost-btn" id="cancelAddModalBtn">キャンセル</button>
+          <button type="submit" class="primary-btn" id="submitStockBtn">追加して同期</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
   <script>
+    // ▼ ここに GAS の「ウェブアプリのURL（.../exec）」を貼り付けてください
+    const GAS_WEB_APP_URL = "";
+
     const TIMEFRAME_META = {
       "5m": { label: "5分足", isIntraday: true },
       "1h": { label: "1時間足", isIntraday: true },
@@ -420,12 +714,23 @@
 
     const state = {
       stocks: [],
+      filteredIndices: [],
       selectedIndex: 0,
       timeframe: "1M",
       chartMode: "candle",
       chart: null,
       currentBars: []
     };
+
+    function showToast(msg, duration = 4000) {
+      const el = document.getElementById("toast");
+      el.textContent = msg;
+      el.style.display = "block";
+      clearTimeout(el._timer);
+      el._timer = setTimeout(() => {
+        el.style.display = "none";
+      }, duration);
+    }
 
     function seedFromCode(code, tf) {
       const str = `${code || "6501"}_${tf || "1M"}`;
@@ -454,13 +759,11 @@
       return `${yyyy}-${mm}-${dd} ${hh}:${min}`;
     }
 
-    // 東証の取引時間（9:00〜11:30、12:30〜15:00、平日）の分足スロットを生成
     function generateIntradayTimestamps(stepMinutes, tradingDaysCount) {
       const slots = [];
       const cursor = new Date();
       cursor.setSeconds(0, 0);
 
-      // 直近の取引日ベースで遡る
       const collectedDays = [];
       const probe = new Date(cursor);
       while (collectedDays.length < tradingDaysCount) {
@@ -473,23 +776,18 @@
       collectedDays.reverse();
 
       const stepSec = stepMinutes * 60;
-
       for (const dayDate of collectedDays) {
-        // 前場 09:00 - 11:30
         const amStart = new Date(dayDate.getFullYear(), dayDate.getMonth(), dayDate.getDate(), 9, 0, 0);
         const amEnd = new Date(dayDate.getFullYear(), dayDate.getMonth(), dayDate.getDate(), 11, 30, 0);
         for (let t = Math.floor(amStart.getTime() / 1000); t <= Math.floor(amEnd.getTime() / 1000); t += stepSec) {
           slots.push(t);
         }
-
-        // 後場 12:30 - 15:00
         const pmStart = new Date(dayDate.getFullYear(), dayDate.getMonth(), dayDate.getDate(), 12, 30, 0);
         const pmEnd = new Date(dayDate.getFullYear(), dayDate.getMonth(), dayDate.getDate(), 15, 0, 0);
         for (let t = Math.floor(pmStart.getTime() / 1000); t <= Math.floor(pmEnd.getTime() / 1000); t += stepSec) {
           slots.push(t);
         }
       }
-
       return slots;
     }
 
@@ -502,7 +800,6 @@
 
       let price = basePrice;
       const bars = [];
-
       for (const t of times) {
         const drift = (nextRand() - 0.485) * (price * volatilityRatio);
         const open = Math.max(50, Math.round((price + (nextRand() - 0.5) * (price * 0.004)) * 10) / 10);
@@ -511,11 +808,9 @@
         const wickDown = nextRand() * (price * volatilityRatio * 0.7);
         const high = Math.round((Math.max(open, close) + wickUp) * 10) / 10;
         const low = Math.max(20, Math.round((Math.min(open, close) - wickDown) * 10) / 10);
-
         bars.push({ time: t, open, high, low, close });
         price = close;
       }
-
       return bars;
     }
 
@@ -527,57 +822,41 @@
       now.setHours(0, 0, 0, 0);
 
       if (tf === "5m") {
-        const times = generateIntradayTimestamps(5, 3);
-        return buildBarsFromTimes(times, basePrice, tfSeed, 0.006);
+        return buildBarsFromTimes(generateIntradayTimestamps(5, 3), basePrice, tfSeed, 0.006);
       }
-
       if (tf === "1h") {
-        const times = generateIntradayTimestamps(60, 15);
-        return buildBarsFromTimes(times, basePrice, tfSeed, 0.012);
+        return buildBarsFromTimes(generateIntradayTimestamps(60, 15), basePrice, tfSeed, 0.012);
       }
-
       if (tf === "1M") {
         const dates = [];
         for (let i = 30; i >= 0; i--) {
           const d = new Date(now);
           d.setDate(now.getDate() - i);
-          if (d.getDay() !== 0 && d.getDay() !== 6) {
-            dates.push(formatDateStr(d));
-          }
+          if (d.getDay() !== 0 && d.getDay() !== 6) dates.push(formatDateStr(d));
         }
         return buildBarsFromTimes(dates, basePrice, tfSeed, 0.022);
       }
-
       if (tf === "1Y") {
         const dates = [];
         for (let i = 365; i >= 0; i--) {
           const d = new Date(now);
           d.setDate(now.getDate() - i);
-          if (d.getDay() !== 0 && d.getDay() !== 6) {
-            dates.push(formatDateStr(d));
-          }
+          if (d.getDay() !== 0 && d.getDay() !== 6) dates.push(formatDateStr(d));
         }
         return buildBarsFromTimes(dates, basePrice, tfSeed, 0.025);
       }
-
-      // "5Y"（最大5年・週足相当）
       const dates = [];
       for (let w = 260; w >= 0; w--) {
         const d = new Date(now);
         d.setDate(now.getDate() - w * 7);
-        while (d.getDay() === 0 || d.getDay() === 6) {
-          d.setDate(d.getDate() - 1);
-        }
+        while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() - 1);
         dates.push(formatDateStr(d));
       }
       return buildBarsFromTimes(dates, basePrice, tfSeed, 0.045);
     }
 
     function formatBarTimeForDisplay(timeVal) {
-      if (typeof timeVal === "number") {
-        return formatTimestampLabel(timeVal);
-      }
-      return String(timeVal ?? "-");
+      return typeof timeVal === "number" ? formatTimestampLabel(timeVal) : String(timeVal ?? "-");
     }
 
     function updateOhlcDisplay(bar) {
@@ -597,39 +876,29 @@
       }
 
       const tfMeta = TIMEFRAME_META[state.timeframe] || TIMEFRAME_META["1M"];
-
       const chart = LightweightCharts.createChart(container, {
         width: container.clientWidth,
         height: container.clientHeight,
         layout: {
-          background: { type: "solid", color: "#0d1422" },
+          background: { type: "solid", color: "#0a101d" },
           textColor: "#cbd5e1"
         },
         grid: {
-          vertLines: { color: "rgba(148, 163, 184, 0.1)" },
-          horzLines: { color: "rgba(148, 163, 184, 0.1)" }
+          vertLines: { color: "rgba(148, 163, 184, 0.08)" },
+          horzLines: { color: "rgba(148, 163, 184, 0.08)" }
         },
-        crosshair: {
-          mode: LightweightCharts.CrosshairMode.Normal
-        },
-        rightPriceScale: {
-          borderColor: "#26344f"
-        },
+        crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+        rightPriceScale: { borderColor: "#23314d" },
         timeScale: {
-          borderColor: "#26344f",
+          borderColor: "#23314d",
           timeVisible: tfMeta.isIntraday,
           secondsVisible: false
         },
-        localization: {
-          timeFormatter: (time) => formatBarTimeForDisplay(time)
-        }
+        localization: { timeFormatter: (time) => formatBarTimeForDisplay(time) }
       });
 
       if (state.chartMode === "line") {
-        const lineSeries = chart.addLineSeries({
-          color: "#3b82f6",
-          lineWidth: 2
-        });
+        const lineSeries = chart.addLineSeries({ color: "#3b82f6", lineWidth: 2 });
         lineSeries.setData(state.currentBars.map(b => ({ time: b.time, value: b.close })));
       } else {
         const candleSeries = chart.addCandlestickSeries({
@@ -644,37 +913,37 @@
       }
 
       chart.timeScale().fitContent();
-
       chart.subscribeCrosshairMove(param => {
         if (!param || param.time === undefined) {
-          if (state.currentBars.length > 0) {
-            updateOhlcDisplay(state.currentBars[state.currentBars.length - 1]);
-          }
+          if (state.currentBars.length > 0) updateOhlcDisplay(state.currentBars[state.currentBars.length - 1]);
           return;
         }
         const found = state.currentBars.find(b => b.time === param.time);
-        if (found) {
-          updateOhlcDisplay(found);
-        }
+        if (found) updateOhlcDisplay(found);
       });
 
       state.chart = chart;
-
-      if (state.currentBars.length > 0) {
-        updateOhlcDisplay(state.currentBars[state.currentBars.length - 1]);
-      }
+      if (state.currentBars.length > 0) updateOhlcDisplay(state.currentBars[state.currentBars.length - 1]);
     }
 
     function renderStockList() {
       const listEl = document.getElementById("stockList");
+      const query = document.getElementById("searchInput").value.trim().toLowerCase();
       listEl.innerHTML = "";
 
+      document.getElementById("stockCount").textContent = state.stocks.length;
+
       state.stocks.forEach((stock, idx) => {
+        const hay = `${stock.code} ${stock.name} ${stock.sector || ""}`.toLowerCase();
+        if (query && !hay.includes(query)) return;
+
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = `stock-btn ${idx === state.selectedIndex ? "active" : ""}`;
         btn.innerHTML = `
-          <div class="stock-code">${escapeHtml(stock.code)}</div>
+          <div class="stock-top">
+            <span class="stock-code">${escapeHtml(stock.code)}</span>
+          </div>
           <div class="stock-name">${escapeHtml(stock.name)}</div>
           <div class="stock-sector">${escapeHtml(stock.sector || "未分類")}</div>
         `;
@@ -688,7 +957,6 @@
     }
 
     function getBarsForCurrentSelection(stock, tf) {
-      // 将来的に stock.charts[tf]（例: { "5m": [...], "1h": [...], "1M": [...], "1Y": [...], "5Y": [...] }）があれば優先利用
       if (stock.charts && Array.isArray(stock.charts[tf]) && stock.charts[tf].length > 0) {
         return { bars: stock.charts[tf], fromRealData: true };
       }
@@ -706,7 +974,6 @@
       const codeEncoded = encodeURIComponent(stock.code);
       document.getElementById("yahooLink").href = `https://finance.yahoo.co.jp/quote/${codeEncoded}.T`;
       document.getElementById("kabutanLink").href = `https://kabutan.jp/stock/?code=${codeEncoded}`;
-
       const tvSymbol = stock.tvSymbol ? encodeURIComponent(stock.tvSymbol) : encodeURIComponent(`TSE:${stock.code}`);
       document.getElementById("tvLink").href = `https://jp.tradingview.com/chart/?symbol=${tvSymbol}`;
 
@@ -735,11 +1002,9 @@
       state.currentBars = bars;
 
       const noticeEl = document.getElementById("dataNotice");
-      if (fromRealData) {
-        noticeEl.textContent = `※ ${tfMeta.label}のデータを表示中です。ホイールで拡大・縮小、ドラッグで移動できます。`;
-      } else {
-        noticeEl.textContent = `※ 「${tfMeta.label}」の操作検証用サンプルを表示中です（ホイールで拡大・縮小、ドラッグで移動できます）。実際の株価データ（分足・日足・長期足）をつなぐ際は、各銘柄データに "${state.timeframe}" 配列を渡すことで差し替えられます。`;
-      }
+      noticeEl.textContent = fromRealData
+        ? `※ ${tfMeta.label}の実データを表示中です（ホイールで拡大・縮小、ドラッグで移動）。`
+        : `※ 「${tfMeta.label}」のプレビュー波形を表示中です（ホイールで拡大・縮小、ドラッグで移動）。`;
 
       ensureChart();
     }
@@ -753,7 +1018,76 @@
         .replace(/'/g, "&#39;");
     }
 
+    function bindModalAndForm() {
+      const modal = document.getElementById("addModal");
+      const openBtn = document.getElementById("openAddModalBtn");
+      const closeBtn = document.getElementById("closeAddModalBtn");
+      const cancelBtn = document.getElementById("cancelAddModalBtn");
+      const form = document.getElementById("addStockForm");
+      const submitBtn = document.getElementById("submitStockBtn");
+
+      const closeModal = () => modal.classList.remove("open");
+      openBtn.addEventListener("click", () => modal.classList.add("open"));
+      closeBtn.addEventListener("click", closeModal);
+      cancelBtn.addEventListener("click", closeModal);
+      modal.addEventListener("click", (e) => {
+        if (e.target === modal) closeModal();
+      });
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        if (!GAS_WEB_APP_URL) {
+          alert("index.html 内の GAS_WEB_APP_URL にデプロイURLを設定してください。");
+          return;
+        }
+
+        const code = document.getElementById("inputCode").value.trim();
+        const name = document.getElementById("inputName").value.trim();
+        const sector = document.getElementById("inputSector").value.trim();
+        const noteText = document.getElementById("inputNotes").value.trim();
+        const passcode = document.getElementById("inputPasscode").value.trim();
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = "同期中...";
+
+        try {
+          const res = await fetch(GAS_WEB_APP_URL, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({ code, name, sector, noteText, passcode, addedBy: "メンバー" })
+          });
+          const data = await res.json();
+          if (!data.ok) {
+            throw new Error(data.error || "追加に失敗しました。");
+          }
+
+          // 画面上のリストにも即時反映（GitHub Pages再ビルド前でもすぐ見れる）
+          const existingIdx = state.stocks.findIndex(s => String(s.code) === String(data.stock.code));
+          if (existingIdx >= 0) {
+            state.stocks[existingIdx] = data.stock;
+            state.selectedIndex = existingIdx;
+          } else {
+            state.stocks.push(data.stock);
+            state.selectedIndex = state.stocks.length - 1;
+          }
+
+          renderStockList();
+          renderSelectedStock();
+          form.reset();
+          closeModal();
+          showToast(`「${data.stock.name}（${data.stock.code}）」を追加し、GitHubと同期しました！`);
+        } catch (err) {
+          alert("エラー: " + err.message);
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = "追加して同期";
+        }
+      });
+    }
+
     function bindControls() {
+      document.getElementById("searchInput").addEventListener("input", renderStockList);
+
       document.querySelectorAll("#tfGroup .ctrl-btn").forEach(btn => {
         btn.addEventListener("click", () => {
           document.querySelectorAll("#tfGroup .ctrl-btn").forEach(b => b.classList.remove("active"));
@@ -773,9 +1107,7 @@
       });
 
       document.getElementById("resetZoomBtn").addEventListener("click", () => {
-        if (state.chart) {
-          state.chart.timeScale().fitContent();
-        }
+        if (state.chart) state.chart.timeScale().fitContent();
       });
 
       window.addEventListener("resize", () => {
@@ -791,17 +1123,14 @@
 
     async function init() {
       bindControls();
+      bindModalAndForm();
       const statusArea = document.getElementById("statusArea");
 
       try {
         const res = await fetch(`./stocks.json?t=${Date.now()}`, { cache: "no-store" });
-        if (!res.ok) {
-          throw new Error(`stocks.json の取得に失敗しました（HTTP ${res.status}）`);
-        }
+        if (!res.ok) throw new Error(`stocks.json の取得に失敗しました（HTTP ${res.status}）`);
         const data = await res.json();
-        if (!Array.isArray(data) || data.length === 0) {
-          throw new Error("stocks.json に銘柄データが見つかりません。");
-        }
+        if (!Array.isArray(data) || data.length === 0) throw new Error("stocks.json に銘柄データが見つかりません。");
         state.stocks = data;
         renderStockList();
         renderSelectedStock();
