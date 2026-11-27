@@ -1,0 +1,41 @@
+[
+  {
+    "code": "6501",
+    "tvSymbol": "TSE:6501",
+    "name": "日立製作所",
+    "sector": "電気機器・社会インフラ",
+    "irUrl": "https://www.hitachi.co.jp/IR/",
+    "notes": [
+      "Lumada事業の成長率と営業利益率の推移をチェック",
+      "送配電（日立エナジー）の受注残とデータセンター向け需要",
+      "四半期決算での通期見通し上方修正の有無"
+    ],
+    "addedBy": "管理者"
+  },
+  {
+    "code": "6861",
+    "tvSymbol": "TSE:6861",
+    "name": "キーエンス",
+    "sector": "電気機器・FAセンサー",
+    "irUrl": "https://www.keyence.co.jp/company/ir/",
+    "notes": [
+      "営業利益率50%超の水準維持と海外売上比率の伸び",
+      "製造業の設備投資動向（米国・欧州・アジア別）",
+      "高PER水準に対する成長期待の織り込み度合い"
+    ],
+    "addedBy": "管理者"
+  },
+  {
+    "code": "285A",
+    "tvSymbol": "TSE:285A",
+    "name": "キオクシアHD",
+    "sector": "半導体・NANDフラッシュ",
+    "irUrl": "https://www.kioxia-holdings.com/ja-jp/ir.html",
+    "notes": [
+      "NAND市況（ビット出荷量・販売単価）のサイクル転換点",
+      "AIサーバー向けSSD需要と設備投資・減価償却負担",
+      "ボラティリティが大きいため決算ガイダンスと在庫水準に注目"
+    ],
+    "addedBy": "管理者"
+  }
+]
