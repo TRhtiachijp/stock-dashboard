@@ -78,5 +78,12 @@
     "sector": "日本株",
     "irUrl": "https://finance.yahoo.co.jp/quote/7182.T/disclosure",
     "notes": ""
+  },
+  {
+    "code": "5401",
+    "name": "NIPPON STEEL CORPORATION",
+    "sector": "日本株",
+    "irUrl": "https://finance.yahoo.co.jp/quote/5401.T/disclosure",
+    "notes": ""
   }
 ]
