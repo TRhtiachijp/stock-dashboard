@@ -15,6 +15,8 @@
       --muted: #8b9bb4;
       --accent: #3b82f6;
       --accent-soft: rgba(59, 130, 246, 0.16);
+      --pdf-accent: #f59e0b;
+      --pdf-soft: rgba(245, 158, 11, 0.14);
     }
 
     * {
@@ -86,6 +88,11 @@
       cursor: pointer;
     }
 
+    .primary-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
     .container {
       max-width: 1100px;
       margin: 0 auto;
@@ -102,25 +109,24 @@
       padding: 14px;
     }
 
-    /* 銘柄選択バー（スマホでもコンパクトに1行） */
     .selector-row {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
-      gap: 10px;
+      gap: 8px;
       margin-bottom: 10px;
     }
 
     .stock-select {
       flex: 1;
-      min-width: 210px;
-      padding: 9px 12px;
+      min-width: 185px;
+      padding: 9px 11px;
       border-radius: 9px;
       border: 1px solid var(--border);
       background: var(--panel-2);
       color: var(--text);
-      font-size: 0.95rem;
+      font-size: 0.94rem;
       font-weight: 700;
       outline: none;
     }
@@ -131,6 +137,7 @@
 
     .meta-badges {
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
       gap: 6px;
     }
@@ -139,13 +146,24 @@
       background: var(--panel-2);
       border: 1px solid var(--border);
       border-radius: 999px;
-      padding: 3px 10px;
-      font-size: 0.75rem;
+      padding: 3px 9px;
+      font-size: 0.74rem;
       color: var(--muted);
     }
 
-    .link-btn {
+    .pdf-btn {
       padding: 6px 11px;
+      border-radius: 8px;
+      border: 1px solid rgba(245, 158, 11, 0.45);
+      background: var(--pdf-soft);
+      color: #fcd34d;
+      text-decoration: none;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    .link-btn {
+      padding: 6px 10px;
       border-radius: 8px;
       border: 1px solid var(--border);
       background: var(--panel-2);
@@ -155,7 +173,6 @@
       font-weight: 600;
     }
 
-    /* 時間足・表示切替ツールバー */
     .chart-toolbar {
       display: flex;
       flex-wrap: wrap;
@@ -206,7 +223,6 @@
       font-variant-numeric: tabular-nums;
     }
 
-    /* 横長で見やすいチャート高さ */
     #chartContainer {
       width: 100%;
       height: 360px;
@@ -241,7 +257,6 @@
       font-size: 0.86rem;
     }
 
-    /* モーダル */
     .modal-backdrop {
       position: fixed;
       inset: 0;
@@ -260,7 +275,7 @@
 
     .modal-card {
       width: 100%;
-      max-width: 440px;
+      max-width: 420px;
       background: var(--panel);
       border: 1px solid var(--border);
       border-radius: 14px;
@@ -302,14 +317,39 @@
     .form-group input,
     .form-group textarea {
       width: 100%;
-      padding: 8px 10px;
+      padding: 9px 11px;
       border-radius: 8px;
       border: 1px solid var(--border);
       background: var(--panel-2);
       color: var(--text);
-      font-size: 0.9rem;
+      font-size: 0.95rem;
       font-family: inherit;
       outline: none;
+    }
+
+    .form-hint {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 5px;
+    }
+
+    details.optional-box {
+      margin-top: 8px;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 8px 10px;
+      background: rgba(22, 32, 51, 0.5);
+    }
+
+    details.optional-box summary {
+      font-size: 0.8rem;
+      color: var(--muted);
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    details.optional-box .inner {
+      margin-top: 10px;
     }
 
     .modal-footer {
@@ -343,7 +383,8 @@
       font-weight: 600;
       z-index: 60;
       display: none;
-      white-space: nowrap;
+      max-width: 92vw;
+      text-align: center;
     }
 
     .error-box {
@@ -375,7 +416,8 @@
         <select id="stockSelect" class="stock-select" aria-label="銘柄を選択"></select>
         <div class="meta-badges">
           <span id="stockSector" class="pill">-</span>
-          <a id="yahooLink" class="link-btn" href="#" target="_blank" rel="noopener noreferrer">Yahoo!ファイナンス</a>
+          <a id="pdfIrLink" class="pdf-btn" href="#" target="_blank" rel="noopener noreferrer">決算PDF・IR</a>
+          <a id="yahooLink" class="link-btn" href="#" target="_blank" rel="noopener noreferrer">Yahoo!</a>
         </div>
       </div>
 
@@ -411,7 +453,7 @@
     </div>
   </main>
 
-  <!-- 銘柄追加モーダル -->
+  <!-- 銘柄コードのみで追加できるモーダル -->
   <div class="modal-backdrop" id="addModal">
     <div class="modal-card">
       <div class="modal-header">
@@ -420,21 +462,29 @@
       </div>
       <form id="addStockForm">
         <div class="form-group">
-          <label for="inputCode">銘柄コード（必須）</label>
-          <input type="text" id="inputCode" placeholder="例: 8035" required />
+          <label for="inputCode">銘柄コード（これだけでOK）</label>
+          <input type="text" id="inputCode" inputmode="text" placeholder="例: 8035 または 285A" required />
+          <div class="form-hint">企業名・業種・決算PDF/IRリンク・概要は自動取得されます。</div>
         </div>
-        <div class="form-group">
-          <label for="inputName">企業名（必須）</label>
-          <input type="text" id="inputName" placeholder="例: 東京エレクトロン" required />
-        </div>
-        <div class="form-group">
-          <label for="inputSector">セクター（任意）</label>
-          <input type="text" id="inputSector" placeholder="空欄可" />
-        </div>
-        <div class="form-group">
-          <label for="inputNotes">メモ（任意）</label>
-          <textarea id="inputNotes" rows="3" placeholder="空欄なら自動作成"></textarea>
-        </div>
+
+        <details class="optional-box">
+          <summary>手動で指定したい場合（任意）</summary>
+          <div class="inner">
+            <div class="form-group">
+              <label for="inputName">企業名</label>
+              <input type="text" id="inputName" placeholder="空欄なら自動取得" />
+            </div>
+            <div class="form-group">
+              <label for="inputIrUrl">決算PDF / IR URL</label>
+              <input type="url" id="inputIrUrl" placeholder="https://...（空欄なら自動取得）" />
+            </div>
+            <div class="form-group">
+              <label for="inputNotes">メモ</label>
+              <textarea id="inputNotes" rows="2" placeholder="空欄なら自動作成"></textarea>
+            </div>
+          </div>
+        </details>
+
         <div class="modal-footer">
           <button type="button" class="ghost-btn" id="cancelAddModalBtn">閉じる</button>
           <button type="submit" class="primary-btn" id="submitStockBtn">追加する</button>
@@ -678,8 +728,13 @@
       const stock = state.stocks[state.selectedIndex];
       if (!stock) return;
 
+      const codeEncoded = encodeURIComponent(stock.code);
       document.getElementById("stockSector").textContent = stock.sector || "未分類";
-      document.getElementById("yahooLink").href = `https://finance.yahoo.co.jp/quote/${encodeURIComponent(stock.code)}.T`;
+      document.getElementById("yahooLink").href = `https://finance.yahoo.co.jp/quote/${codeEncoded}.T`;
+
+      // irUrl があればそれを開き、無ければYahoo!ファイナンスの決算・適時開示（PDF一覧）へ遷移
+      const pdfUrl = stock.irUrl || `https://finance.yahoo.co.jp/quote/${codeEncoded}.T/disclosure`;
+      document.getElementById("pdfIrLink").href = pdfUrl;
 
       const notesEl = document.getElementById("notesList");
       notesEl.innerHTML = "";
@@ -720,7 +775,10 @@
       const submitBtn = document.getElementById("submitStockBtn");
 
       const closeModal = () => modal.classList.remove("open");
-      openBtn.addEventListener("click", () => modal.classList.add("open"));
+      openBtn.addEventListener("click", () => {
+        modal.classList.add("open");
+        setTimeout(() => document.getElementById("inputCode").focus(), 50);
+      });
       closeBtn.addEventListener("click", closeModal);
       cancelBtn.addEventListener("click", closeModal);
       modal.addEventListener("click", (e) => { if (e.target === modal) closeModal(); });
@@ -734,17 +792,17 @@
 
         const code = document.getElementById("inputCode").value.trim();
         const name = document.getElementById("inputName").value.trim();
-        const sector = document.getElementById("inputSector").value.trim();
+        const irUrl = document.getElementById("inputIrUrl").value.trim();
         const noteText = document.getElementById("inputNotes").value.trim();
 
         submitBtn.disabled = true;
-        submitBtn.textContent = "追加中...";
+        submitBtn.textContent = "自動取得・追加中...";
 
         try {
           const res = await fetch(GAS_WEB_APP_URL, {
             method: "POST",
             headers: { "Content-Type": "text/plain;charset=utf-8" },
-            body: JSON.stringify({ code, name, sector, noteText, addedBy: "メンバー" })
+            body: JSON.stringify({ code, name, irUrl, noteText, addedBy: "メンバー" })
           });
           const data = await res.json();
           if (!data.ok) throw new Error(data.error || "追加に失敗しました。");
